@@ -1,13 +1,37 @@
-### Vue template
-# gitignore template for Vue.js projects
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+/src/main/resources/rebel.xml
+.mvn
+application-dev.yml
+application-prod.yml
 
-### Vuejs template
-# Recommended template: Node.gitignore
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
 
-node_modules/
-dist/
-npm-debug.log
-yarn-error.log
+### IntelliJ IDEA ###
 .idea
-blog.iml
-ruyu-blog-doc/
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
