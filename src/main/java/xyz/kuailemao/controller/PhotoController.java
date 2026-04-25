@@ -72,7 +72,7 @@ public class PhotoController {
         return photoService.createAlbum(albumDTO);
     }
 
-    @PreAuthorize("hasAnyAuthority('blog:photo:upload')")
+    //@PreAuthorize("hasAnyAuthority('blog:photo:upload')")
     @Operation(summary = "后台上传照片")
     @AccessLimit(seconds = 60, maxCount = 30)
     @LogAnnotation(module = "相册管理", operation = LogConst.UPLOAD_IMAGE)

@@ -24,9 +24,9 @@ import xyz.kuailemao.utils.ControllerUtils;
 import java.util.List;
 
 /**
- * @author kuailemao
+ * @author TheEternal
  * <p>
- * 创建时间：2023/11/28 9:20
+ * 创建时间：2026.4.18
  */
 @RestController
 @Tag(name = "角色相关接口")

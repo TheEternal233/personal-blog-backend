@@ -83,32 +83,36 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 
     @Override
     public ResponseResult<Void> createAlbum(PhotoAlbumDTO albumDTO) {
-        // 是否存在相同名称的相册
-        if (
-                photoMapper.selectCount(
-                        new LambdaQueryWrapper<Photo>()
-                                .eq(Photo::getName, albumDTO.getName())
-                                .eq(Photo::getType, AlbumOrPhotoEnum.ALBUM.getCode())
-                                .eq(Photo::getParentId, albumDTO.getParentId())
-                ) > 0) {
-            return ResponseResult.failure("相册名称存在重复");
-        }
-        String albumUrl = "";
+        // ====================== 【修复重名】======================
+        // 判断当前相册下是否存在 同名相册 或 同名照片
+        LambdaQueryWrapper<Photo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Photo::getName, albumDTO.getName());
 
+        // 关键修复
+        if (albumDTO.getParentId() == null) {
+            queryWrapper.isNull(Photo::getParentId);
+        } else {
+            queryWrapper.eq(Photo::getParentId, albumDTO.getParentId());
+        }
+
+        if (photoMapper.selectCount(queryWrapper) > 0) {
+            return ResponseResult.failure("该名称已存在，请修改名称");
+        }
+        // ======================================================
+
+        String albumUrl = "";
         if (albumDTO.getParentId() != null && photoMapper.selectCount(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId())) > 0) {
-            // 获取相册的路径
             albumUrl = photoMapper.selectOne(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId())).getUrl();
         }
-        if (
-                photoMapper.insert(Photo.builder()
-                        .userId(SecurityUtils.getUserId())
-                        .parentId(albumDTO.getParentId())
-                        .name(albumDTO.getName())
-                        .description(albumDTO.getDescription())
-                        .type(AlbumOrPhotoEnum.ALBUM.getCode())
-                        .url(albumUrl + "/" + albumDTO.getName())
-                        .build()
-                ) > 0) {
+        if (photoMapper.insert(Photo.builder()
+                .userId(SecurityUtils.getUserId())
+                .parentId(albumDTO.getParentId())
+                .name(albumDTO.getName())
+                .description(albumDTO.getDescription())
+                .type(AlbumOrPhotoEnum.ALBUM.getCode())
+                .url(albumUrl + "/" + albumDTO.getName())
+                .build()
+        ) > 0) {
             return ResponseResult.success();
         }
         return ResponseResult.failure();
@@ -118,29 +122,30 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
     @Override
     public ResponseResult<Void> uploadPhoto(MultipartFile file, String name, Long parentId) {
         try {
-            // TODO 注意：如minio地址配置的是nginx代理域名，则需要配置nginx的文件上传大小
-            // 当前相册是否存在相同名称照片
-            if (
-                    photoMapper.selectCount(
-                            new LambdaQueryWrapper<Photo>()
-                                    .eq(Photo::getName, name)
-                                    .eq(Photo::getType, AlbumOrPhotoEnum.PHOTO.getCode())
-                                    .eq(Photo::getParentId, parentId)
-                    ) > 0) {
-                return ResponseResult.failure("照片名称存在重复");
+            if (file.isEmpty()) {
+                return ResponseResult.failure("上传文件不能为空");
+            }
+
+            // ====================== 修复重名======================
+            LambdaQueryWrapper<Photo> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Photo::getName, name);
+            if (parentId == null) {
+                queryWrapper.isNull(Photo::getParentId);
+            } else {
+                queryWrapper.eq(Photo::getParentId, parentId);
+            }
+            if (photoMapper.selectCount(queryWrapper) > 0) {
+                return ResponseResult.failure("该名称已存在，请修改名称");
             }
 
             String bannerUrl;
-            // 查询父相册的名称
             if (StringUtils.isNotNull(parentId)) {
-                // 递归查询父相册并组合路径，并去掉最前面的 /
                 bannerUrl = photoMapper.selectById(parentId).getUrl().replaceFirst("^/", "");
                 bannerUrl = fileUploadUtils.upload(UploadEnum.PHOTO_ALBUM, file, name, bannerUrl);
             } else {
                 bannerUrl = fileUploadUtils.upload(UploadEnum.PHOTO_ALBUM, file, name);
             }
 
-            //添加数据库
             photoMapper.insert(Photo.builder()
                     .userId(SecurityUtils.getUserId())
                     .parentId(parentId)
