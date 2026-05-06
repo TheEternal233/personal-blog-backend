@@ -9,5 +9,4 @@ import java.util.List;
 
 @Mapper
 public interface AiMessageMapper extends BaseMapper<AiMessage> {
-    //List<AiMessage> selectBySessionId(Long sessionId);
 }

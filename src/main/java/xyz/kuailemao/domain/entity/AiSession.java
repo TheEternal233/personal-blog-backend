@@ -15,6 +15,7 @@ public class AiSession {
     private Long userId;
     private String title;
     private String preview;
+    private String model;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

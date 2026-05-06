@@ -9,5 +9,4 @@ import java.util.List;
 
 @Mapper
 public interface AiSessionMapper extends BaseMapper<AiSession> {
-    //List<AiSession> selectByUserId(Long userId);
 }

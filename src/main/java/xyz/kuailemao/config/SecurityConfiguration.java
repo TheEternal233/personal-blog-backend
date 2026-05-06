@@ -58,6 +58,7 @@ public class SecurityConfiguration {
                 )
                 // 禁用 csrf
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(conf -> conf.disable())
                 // 不处理 session ，使用token
                 .sessionManagement(conf -> conf.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // token 校验添加过滤器
