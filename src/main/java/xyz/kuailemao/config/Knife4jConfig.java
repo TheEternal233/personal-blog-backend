@@ -15,7 +15,7 @@ public class Knife4jConfig {
                         .title("API文档")
                         .version("1.0")
                         .description("基于SpringBoot3 + Vue3开发的博客项目")
-                        .contact(new Contact().name("Ruyu").url("https://kuailemao.xyz").email("ruyusan@qq.com"))
+                        .contact(new Contact().name("Ruyu").url("http://localhost:99/").email("2950355750@qq.com"))
                 );
     }
 }

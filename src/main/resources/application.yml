@@ -24,13 +24,13 @@ spring:
       api-key: ${ZHIPU_API_KEY}
       chat:
         options:
-          model: glm-4-flash
-          connect-timeout: 60000
-          read-timeout: 60000
+          model: glm-4.7
+          connect-timeout: 60s
+          read-timeout: 120s
 
 
 
-  # ✅ 正确邮箱配置（唯一一段，不会重复）
+
   mail:
     host: smtp.qq.com
     username: 2950355750@qq.com

@@ -13,6 +13,7 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>blog-backend</name>
 
+    <!-- 必须添加 Spring Milestones 仓库 -->
     <repositories>
         <repository>
             <id>spring-milestones</id>
@@ -28,7 +29,7 @@
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
-                <version>1.0.0-M2</version>
+                <version>1.0.0-M6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -170,6 +171,22 @@
             <artifactId>spring-ai-zhipuai-spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- Qdrant 向量数据库 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-qdrant-store</artifactId>
+        </dependency>
+
+        <!-- 文档读取（用于加载知识库） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -181,7 +198,6 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -200,5 +216,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

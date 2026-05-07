@@ -1,5 +1,6 @@
 package xyz.kuailemao.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -44,7 +45,7 @@ public class AiServiceImpl implements AiService {
         // 从 SecurityContext 获取当前用户 ID
         Long userId = getCurrentUserId();
         session.setUserId(userId);
-        session.setPreview("新对话");
+        session.setPreview("嗨，你好呀！有什么可以帮到你的吗？");
         session.setCreatedAt(LocalDateTime.now());
         session.setUpdatedAt(LocalDateTime.now());
         aiSessionMapper.insert(session);
@@ -72,10 +73,11 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public void updateSessionTitle(Long id, String title) {
-        AiSession session = new AiSession();
-        session.setId(id);
-        session.setTitle(title);
-        aiSessionMapper.updateById(session);
+        UpdateWrapper<AiSession> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", id)
+                .set("title", title)
+                .set("updated_at", LocalDateTime.now());
+        aiSessionMapper.update(null, wrapper);
     }
 
     @Override
