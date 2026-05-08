@@ -6,6 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +22,8 @@ import xyz.kuailemao.mapper.UserMapper;
 import xyz.kuailemao.service.AiService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,6 +42,15 @@ public class AiServiceImpl implements AiService {
 
     @Resource
     private AiMessageMapper aiMessageMapper;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    // ===================== redis常量 =====================
+    private static final String REDIS_CHAT_PREFIX = "ai:chat:";
+    private static final long REDIS_EXPIRE = 3600 *24*7;
+    @Autowired
+    private RedisTemplate<Object, Object> redisTemplate;
 
     // ===================== 会话管理 =====================
     @Override
@@ -92,10 +106,12 @@ public class AiServiceImpl implements AiService {
         if (session == null) {
             throw new RuntimeException("无权操作此会话");
         }
-
+        // 删db
         chatMemory.clear(id.toString());
         aiMessageMapper.delete(new LambdaQueryWrapper<AiMessage>().eq(AiMessage::getSessionId, id));
         aiSessionMapper.deleteById(id);
+        // 删redis
+        redisTemplate.delete(REDIS_CHAT_PREFIX + id);
     }
 
     // ===================== 带记忆聊天=====================
@@ -133,11 +149,28 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public List<AiMessage> getMessagesBySessionId(Long sessionId) {
-        return aiMessageMapper.selectList(
+        String key = REDIS_CHAT_PREFIX + sessionId;
+        // 先读redis
+        List<Object> rawList = redisTemplate.opsForList().range(key,0,-1);
+        if(rawList != null && rawList.size() > 0) {
+            return rawList.stream().map(o -> (AiMessage) o).toList();
+        }
+        // redis 没有，读db
+        List<AiMessage> messages = aiMessageMapper.selectList(
                 new LambdaQueryWrapper<AiMessage>()
                         .eq(AiMessage::getSessionId, sessionId)
                         .orderByAsc(AiMessage::getCreatedAt)
         );
+
+        // 会写reids
+        if(messages !=null && !messages.isEmpty()){
+            redisTemplate.opsForList().rightPushAll(key, messages);
+            redisTemplate.expire(key, REDIS_EXPIRE, TimeUnit.MINUTES);
+        }
+
+        return messages;
+
+
     }
 
     // ===================== 私有方法 =====================
@@ -148,6 +181,10 @@ public class AiServiceImpl implements AiService {
         msg.setContent(content);
         msg.setCreatedAt(LocalDateTime.now());
         log.info(">>> AiMessage 对象: {}", msg);
+        // 存入redis
+        redisTemplate.opsForList().rightPush(REDIS_CHAT_PREFIX + sessionId, msg);
+        redisTemplate.expire(REDIS_CHAT_PREFIX+sessionId,REDIS_EXPIRE, TimeUnit.SECONDS);
+        // 存入mysql
         aiMessageMapper.insert(msg);
     }
 

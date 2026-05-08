@@ -46,6 +46,7 @@ public class AiConfig {
                 ChatMemory chatMemory,
                 VectorStore vectorStore
         ) {
+
             return ChatClient.builder(model)
                     .defaultSystem("""
                         
