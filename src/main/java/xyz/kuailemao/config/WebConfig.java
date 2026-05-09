@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import xyz.kuailemao.interceptor.AccessLimitInterceptor;
+import xyz.kuailemao.interceptor.RequestCacheClearInterceptor;
 
 /**
  * @author TheEternal
@@ -16,10 +17,14 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Resource
     private AccessLimitInterceptor accessLimitInterceptor;
+    @Resource
+    private RequestCacheClearInterceptor interceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // redis限流拦截器
-        registry.addInterceptor(accessLimitInterceptor).addPathPatterns("/**");
+        registry.addInterceptor(accessLimitInterceptor).addPathPatterns("/**").order(1);
+        registry.addInterceptor(interceptor).addPathPatterns("/**").order(2);
+
     }
 }

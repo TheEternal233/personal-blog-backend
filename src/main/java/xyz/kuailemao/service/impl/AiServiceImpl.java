@@ -1,5 +1,7 @@
 package xyz.kuailemao.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ import xyz.kuailemao.mapper.UserMapper;
 import xyz.kuailemao.service.AiService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -150,27 +153,35 @@ public class AiServiceImpl implements AiService {
     @Override
     public List<AiMessage> getMessagesBySessionId(Long sessionId) {
         String key = REDIS_CHAT_PREFIX + sessionId;
-        // 先读redis
-        List<Object> rawList = redisTemplate.opsForList().range(key,0,-1);
-        if(rawList != null && rawList.size() > 0) {
-            return rawList.stream().map(o -> (AiMessage) o).toList();
+
+        // 1. 先读 redis
+        List<Object> redisMessages = redisTemplate.opsForList().range(key, 0, -1);
+        if (CollUtil.isNotEmpty(redisMessages)) {
+            try {
+                String jsonArray = redisMessages.get(0).toString();
+                return JSON.parseArray(jsonArray, AiMessage.class);
+            } catch (Exception e) {
+                log.error("Redis 消息解析异常", e);
+                // 解析失败就清空缓存，走数据库
+                redisTemplate.delete(key);
+            }
         }
-        // redis 没有，读db
-        List<AiMessage> messages = aiMessageMapper.selectList(
+
+        // 2. redis 没有，读数据库
+        List<AiMessage> dbMessages = aiMessageMapper.selectList(
                 new LambdaQueryWrapper<AiMessage>()
                         .eq(AiMessage::getSessionId, sessionId)
                         .orderByAsc(AiMessage::getCreatedAt)
         );
 
-        // 会写reids
-        if(messages !=null && !messages.isEmpty()){
-            redisTemplate.opsForList().rightPushAll(key, messages);
-            redisTemplate.expire(key, REDIS_EXPIRE, TimeUnit.MINUTES);
+        // 3. 回写 redis
+        if (CollUtil.isNotEmpty(dbMessages)) {
+            String json = JSON.toJSONString(dbMessages);
+            redisTemplate.opsForList().rightPush(key, json);
+            redisTemplate.expire(key, REDIS_EXPIRE, TimeUnit.SECONDS);
         }
 
-        return messages;
-
-
+        return dbMessages;
     }
 
     // ===================== 私有方法 =====================

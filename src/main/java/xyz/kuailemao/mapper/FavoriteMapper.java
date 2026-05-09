@@ -1,15 +1,13 @@
 package xyz.kuailemao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 import xyz.kuailemao.domain.entity.Favorite;
 
+import java.util.List;
+import java.util.Map;
 
-/**
- * (Favorite)表数据库访问层
- *
- * @author kuailemao
- * @since 2023-10-18 14:12:23
- */
 public interface FavoriteMapper extends BaseMapper<Favorite> {
+
 
 }

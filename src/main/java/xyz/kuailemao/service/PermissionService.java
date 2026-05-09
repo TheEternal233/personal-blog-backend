@@ -52,4 +52,24 @@ public interface PermissionService extends IService<Permission> {
      * @return 是否成功
      */
     ResponseResult<Void> deletePermission(Long id);
+
+    // ========== 新增：用户权限缓存方法 ==========
+
+    /**
+     * 获取用户权限列表（走 Redis 缓存）
+     * @param userId 用户ID
+     * @return 权限字符列表
+     */
+    List<String> getUserPermissions(Long userId);
+
+    /**
+     * 清除用户权限缓存
+     * @param userId 用户ID
+     */
+    void evictUserPermissionCache(Long userId);
+
+    /**
+     * 清除所有用户权限缓存（权限变动时调用）
+     */
+    void evictAllPermissionCache();
 }
