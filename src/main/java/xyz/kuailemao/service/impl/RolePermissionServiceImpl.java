@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import xyz.kuailemao.domain.dto.RolePermissionDTO;
 import xyz.kuailemao.domain.entity.Role;
 import xyz.kuailemao.domain.entity.RolePermission;
@@ -14,9 +15,7 @@ import xyz.kuailemao.mapper.RoleMapper;
 import xyz.kuailemao.mapper.RolePermissionMapper;
 import xyz.kuailemao.service.RolePermissionService;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * (RolePermission)表服务实现类
@@ -24,7 +23,7 @@ import java.util.Objects;
  * @author kuailemao
  * @since 2023-10-13 15:02:40
  */
-@Service("rolePermissionService")
+@Service
 public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper, RolePermission> implements RolePermissionService {
 
     @Resource
@@ -33,66 +32,98 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     @Resource
     private RolePermissionMapper rolePermissionMapper;
 
+    /**
+     * 根据权限ID查询角色（0=拥有该权限，1=未拥有该权限）
+     */
     @Override
     public List<RoleAllVO> selectRoleByPermissionId(Long permissionId, String roleName, String roleKey, Integer type) {
-        LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RolePermission::getPermissionId, permissionId);
-        List<Long> roleIds;
+        // 1. 先查询所有绑定了该权限的角色ID
+        LambdaQueryWrapper<RolePermission> rpWrapper = new LambdaQueryWrapper<>();
+        rpWrapper.eq(RolePermission::getPermissionId, permissionId);
+        List<Long> boundRoleIds = rolePermissionMapper.selectList(rpWrapper).stream()
+                .map(RolePermission::getRoleId)
+                .toList();
+
+        // 2. 构建角色查询条件
+        LambdaQueryWrapper<Role> roleWrapper = new LambdaQueryWrapper<>();
+        // 模糊查询角色名/角色标识
+        roleWrapper.like(roleName != null, Role::getRoleName, roleName);
+        roleWrapper.like(roleKey != null, Role::getRoleKey, roleKey);
+
+        // 3. 根据类型筛选：0=已绑定，1=未绑定
         if (type == 0) {
-            // 没有使用该权限的角色
-            roleIds = rolePermissionMapper.selectList(wrapper).stream().map(RolePermission::getRoleId).toList();
+            // 已拥有权限：IN 已绑定角色ID
+            if (CollectionUtils.isEmpty(boundRoleIds)) {
+                return List.of();
+            }
+            roleWrapper.in(Role::getId, boundRoleIds);
         } else {
-            // 查询存在权限的角色id
-            roleIds = rolePermissionMapper.selectList(wrapper).stream().map(RolePermission::getRoleId).toList();
-            // 查询没有该权限的角色
-            roleIds = roleMapper.selectList(new LambdaQueryWrapper<Role>().notIn(!roleIds.isEmpty(), Role::getId, roleIds))
-                    .stream().map(Role::getId).toList();
+            // 未拥有权限：NOT IN 已绑定角色ID
+            roleWrapper.notIn(!CollectionUtils.isEmpty(boundRoleIds), Role::getId, boundRoleIds);
         }
 
-        if (!roleIds.isEmpty()) {
-            LambdaQueryWrapper<Role> queryWrapper = new LambdaQueryWrapper<>();
-            List<Role> roleList = new ArrayList<>();
-            // 查询角色信息
-            roleIds.forEach(roleId -> {
-                if (Objects.nonNull(roleName)) queryWrapper.like(Role::getRoleName, roleName);
-                if (Objects.nonNull(roleKey)) queryWrapper.and(a -> a.like(Role::getRoleKey, roleKey));
-                queryWrapper.eq(Role::getId, roleId);
-                roleList.addAll(roleMapper.selectList(queryWrapper));
-                queryWrapper.clear();
-            });
-            return roleList.stream().map(role -> role.asViewObject(RoleAllVO.class)).toList();
-        }
-        return null;
+        // 4. 一次性查询所有角色（替换原循环查库，性能大幅提升）
+        List<Role> roleList = roleMapper.selectList(roleWrapper);
+
+        // 5. 转换VO返回
+        return roleList.stream()
+                .map(role -> role.asViewObject(RoleAllVO.class))
+                .toList();
     }
 
-    @Transactional
+    /**
+     * 批量添加角色权限关联
+     */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public ResponseResult<Void> addRolePermission(RolePermissionDTO rolePermissionDTO) {
         List<Long> roleIds = rolePermissionDTO.getRoleId();
         List<Long> permissionIds = rolePermissionDTO.getPermissionId();
-        LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.in(RolePermission::getPermissionId, permissionIds)
-                .in(RolePermission::getRoleId, roleIds);
-        // 如有，先删除
-        if (rolePermissionMapper.selectCount(wrapper) > 0) rolePermissionMapper.delete(wrapper);
 
-        List<RolePermission> rolePermissions = new ArrayList<>();
-        roleIds.forEach(roleId -> {
-            permissionIds.forEach(permissionId -> {
-                rolePermissions.add(RolePermission.builder().roleId(roleId).permissionId(permissionId).build());
-            });
-        });
-        if (saveBatch(rolePermissions)) return ResponseResult.success();
+        // 空值校验
+        if (CollectionUtils.isEmpty(roleIds) || CollectionUtils.isEmpty(permissionIds)) {
+            return ResponseResult.failure("角色ID或权限ID不能为空");
+        }
 
-        return ResponseResult.failure();
+        // 1. 先删除原有关联（避免重复）
+        LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.in(RolePermission::getRoleId, roleIds)
+                .in(RolePermission::getPermissionId, permissionIds);
+        rolePermissionMapper.delete(delWrapper);
+
+        // 2. 批量构建新关联
+        List<RolePermission> rolePermissions = roleIds.stream()
+                .flatMap(roleId -> permissionIds.stream()
+                        .map(permissionId -> RolePermission.builder()
+                                .roleId(roleId)
+                                .permissionId(permissionId)
+                                .build()))
+                .toList();
+
+        // 3. 批量保存
+        boolean saveSuccess = saveBatch(rolePermissions);
+        return saveSuccess ? ResponseResult.success() : ResponseResult.failure("保存失败");
     }
 
+    /**
+     * 删除角色权限关联
+     */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public ResponseResult<Void> deleteRolePermission(RolePermissionDTO rolePermissionDTO) {
-        int isDelete = rolePermissionMapper.delete(new LambdaQueryWrapper<RolePermission>().in(RolePermission::getPermissionId, rolePermissionDTO.getPermissionId()).in(RolePermission::getRoleId, rolePermissionDTO.getRoleId()));
-        if (isDelete > 0) {
-            return ResponseResult.success();
+        List<Long> roleIds = rolePermissionDTO.getRoleId();
+        List<Long> permissionIds = rolePermissionDTO.getPermissionId();
+
+        // 空值校验
+        if (CollectionUtils.isEmpty(roleIds) || CollectionUtils.isEmpty(permissionIds)) {
+            return ResponseResult.failure("角色ID或权限ID不能为空");
         }
-        return ResponseResult.failure();
+
+        LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(RolePermission::getRoleId, roleIds)
+                .in(RolePermission::getPermissionId, permissionIds);
+
+        int deleteCount = rolePermissionMapper.delete(wrapper);
+        return deleteCount > 0 ? ResponseResult.success() : ResponseResult.failure("删除失败，无匹配数据");
     }
 }

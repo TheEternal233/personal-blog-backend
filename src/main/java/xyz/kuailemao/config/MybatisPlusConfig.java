@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@MapperScan("xyz.kuailemao.mapper")//扫描mapper文件夹
 public class MybatisPlusConfig {
 
     /**

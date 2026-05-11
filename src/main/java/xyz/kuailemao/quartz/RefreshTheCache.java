@@ -30,17 +30,30 @@ public class RefreshTheCache extends QuartzJobBean {
     @Override
     protected void executeInternal(@NonNull JobExecutionContext context) {
         log.info("-------------------------------开始同步文章浏览量到数据库-------------------------------");
+        int successCount = 0;
+        int failCount = 0;
         try {
             // 获取所有文章id
             List<Long> articleIds = articleMapper.selectList(null).stream().map(Article::getId).toList();
             // 通过id从redis中获取缓存的访问量
-            articleIds.forEach(id -> {
-                // 把访问量设置到mysql数据库中
-                Long cacheObject = Long.valueOf((Integer)redisCache.getCacheObject(RedisConst.ARTICLE_VISIT_COUNT + id));
-                // 不会触发自动填充
-                articleMapper.update(null,new LambdaUpdateWrapper<Article>().eq(Article::getId,id).set(Article::getVisitCount,cacheObject));
-            });
-            log.info("-------------------------------同步文章浏览量成功-------------------------------");
+            for(Long id : articleIds){
+                try {
+                    Object cacheObject = redisCache.getCacheObject(RedisConst.ARTICLE_VISIT_COUNT + id);
+                    if(cacheObject==null) continue;
+                    long visitCount = Long.parseLong(cacheObject.toString());
+
+                    articleMapper.update(null,
+                            new LambdaUpdateWrapper<Article>()
+                                    .eq(Article::getId, id)
+                                    .set(Article::getVisitCount, visitCount)
+                    );
+                    successCount++;
+                }catch (Exception e){
+                    failCount++;
+                    log.error("同步文章[id={}]浏览量失败", id, e);
+                }
+            }
+            log.info("-------------------------------同步文章浏览量完成，成功{}条，失败{}条-------------------------------", successCount, failCount);
         } catch (Exception e) {
             log.error("同步文章浏览量失败",e);
         }

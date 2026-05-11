@@ -54,7 +54,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/blog?useSSL=false&useUnicode=true&characterEncoding=utf8&autoReconnect=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/blog?useSSL=true&requireSSL=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -100,6 +100,8 @@ spring:
       email: email_routing_key
       log-login: log_routing_key_login
       log-system: log_routing_key_system
+    deserialization:
+      trust-all: true
 
   servlet:
     multipart:
@@ -121,7 +123,7 @@ spring:
               driver: com.mysql.cj.jdbc.Driver
               URL: jdbc:mysql://localhost:3306/blog?useSSL=false&useUnicode=true&characterEncoding=utf8&autoReconnect=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
               user: root
-              password: 4626463ljh.w
+              password: ${DB_PASSWORD}
 
 # ✅ 项目自定义邮箱配置（和spring.mail不冲突）
 mail:
@@ -143,8 +145,9 @@ mybatis:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       logic-delete-field: isDeleted
