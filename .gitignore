@@ -7,6 +7,7 @@ target/
 .mvn
 application-dev.yml
 application-prod.yml
+application-secret.yml
 
 ### STS ###
 .apt_generated
