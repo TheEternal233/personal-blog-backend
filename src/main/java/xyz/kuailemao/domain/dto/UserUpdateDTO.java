@@ -16,6 +16,5 @@ public class UserUpdateDTO implements BaseData {
     @NotNull
     private String avatar;
     //个人简介
-    @NotNull
     private String intro;
 }

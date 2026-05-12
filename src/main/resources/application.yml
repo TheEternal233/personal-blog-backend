@@ -164,3 +164,9 @@ minio:
   accessKey: ${MINIO_USERNAME}
   secretKey: ${MINIO_PASSWORD}
   bucketName: blog
+
+oauth:
+  gitee:
+    clientId: ${GITEE_CLIENT_ID}
+    clientSecret: ${GITEE_CLIENT_SECRET}
+    redirectUri: http://localhost:8088/oauth/gitee/callback
