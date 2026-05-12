@@ -2,9 +2,9 @@ server:
   port: 8088
 spring:
   config:
-    import: application-secret.yml
+    import: classpath:application-secret.yml
   profiles:
-    active: "@profiles.active@"
+    active: dev
   ai:
     #向量数据库
     vectorstore:
@@ -34,7 +34,7 @@ spring:
   mail:
     host: smtp.qq.com
     username: 2950355750@qq.com
-    password: attxyzzuglmmdeif
+    password: ${MAIL_PASSWORD}
     default-encoding: UTF-8
     properties:
       mail:
@@ -54,7 +54,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/blog?useSSL=true&requireSSL=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
