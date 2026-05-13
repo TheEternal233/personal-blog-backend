@@ -171,3 +171,7 @@ oauth:
     clientId: ${GITEE_CLIENT_ID}
     clientSecret: ${GITEE_CLIENT_SECRET}
     redirectUri: http://localhost:8088/oauth/gitee/callback
+  github:
+    clientId: ${GITHUB_CLIENT_ID}
+    clientSecret: ${GITHUB_CLIENT_SECRET}
+    redirectUri: http://localhost:8088/oauth/github/callback

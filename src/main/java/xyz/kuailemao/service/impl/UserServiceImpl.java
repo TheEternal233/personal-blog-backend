@@ -8,6 +8,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -95,6 +96,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Resource
     private IpService ipService;
 
+    @Autowired
+    private OkHttpClient okHttpClient;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -120,7 +123,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
             // github
             if (typeHeader.equals(RegisterOrLoginTypeEnum.GITHUB.getStrategy())) {
-                OkHttpClient client = new OkHttpClient();
+                OkHttpClient client = okHttpClient;
                 Headers headers = new Headers.Builder()
                         .add(RequestHeaderEnum.GITHUB_USER_INFO.getHeader(), RequestHeaderEnum.GITHUB_USER_INFO.getContent())
                         .add(RespConst.TOKEN_HEADER, RespConst.TOKEN_PREFIX + accessToken)
