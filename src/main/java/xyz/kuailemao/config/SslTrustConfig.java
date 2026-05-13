@@ -82,7 +82,7 @@ public class SslTrustConfig {
             sslContext.init(null, tmf.getTrustManagers(), new SecureRandom());
             SSLContext.setDefault(sslContext);
 
-            log.info("SSL信任配置: 初始化完成, 新增 {} 张证书", addedCount);
+            log.info("SSL信任配置:  初始化完成, 新增 {} 张证书", addedCount);
         } catch (Exception e) {
             log.error("SSL信任配置: 初始化失败", e);
         }
