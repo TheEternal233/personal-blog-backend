@@ -50,7 +50,7 @@ spring:
 
   security:
     jwt:
-      key: jwt-key
+      key: ${JWT_SECRET}
       expire: 7
 
   datasource:
@@ -102,7 +102,9 @@ spring:
       log-login: log_routing_key_login
       log-system: log_routing_key_system
     deserialization:
-      trust-all: true
+      trust-all: false
+      trusted-packages:
+        - xyz.kuailemao
 
   servlet:
     multipart:
@@ -122,9 +124,10 @@ spring:
           dataSource:
             quartz_jobs:
               driver: com.mysql.cj.jdbc.Driver
-              URL: jdbc:mysql://localhost:3306/blog?useSSL=false&useUnicode=true&characterEncoding=utf8&autoReconnect=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-              user: root
+              URL: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
+              user: ${DB_USERNAME}
               password: ${DB_PASSWORD}
+              maxConnections: 10
 
 # ✅ 项目自定义邮箱配置（和spring.mail不冲突）
 mail:
@@ -143,7 +146,7 @@ mail:
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -159,6 +162,10 @@ mybatis-plus:
 web:
   index:
     path: http://localhost:99/
+
+# CORS 白名单，仅允许这些 Origin 跨域访问（逗号分隔）
+cors:
+  allowed-origins: http://localhost:99,http://localhost:9988,http://127.0.0.1:99,http://127.0.0.1:9988,${CORS_ORIGIN_PROD:}
 
 minio:
   endpoint: http://192.168.100.132:9000
