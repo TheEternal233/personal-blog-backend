@@ -154,12 +154,13 @@ public class AiServiceImpl implements AiService {
     public List<AiMessage> getMessagesBySessionId(Long sessionId) {
         String key = REDIS_CHAT_PREFIX + sessionId;
 
-        // 1. 先读 redis
+        // 1. 先读 redis（每条消息是独立的元素）
         List<Object> redisMessages = redisTemplate.opsForList().range(key, 0, -1);
         if (CollUtil.isNotEmpty(redisMessages)) {
             try {
-                String jsonArray = redisMessages.get(0).toString();
-                return JSON.parseArray(jsonArray, AiMessage.class);
+                return redisMessages.stream()
+                        .map(obj -> JSON.parseObject(obj.toString(), AiMessage.class))
+                        .collect(Collectors.toList());
             } catch (Exception e) {
                 log.error("Redis 消息解析异常", e);
                 // 解析失败就清空缓存，走数据库
@@ -174,10 +175,11 @@ public class AiServiceImpl implements AiService {
                         .orderByAsc(AiMessage::getCreatedAt)
         );
 
-        // 3. 回写 redis
+        // 3. 回写 redis（逐条写入，与 saveMessage 格式一致）
         if (CollUtil.isNotEmpty(dbMessages)) {
-            String json = JSON.toJSONString(dbMessages);
-            redisTemplate.opsForList().rightPush(key, json);
+            for (AiMessage msg : dbMessages) {
+                redisTemplate.opsForList().rightPush(key, msg);
+            }
             redisTemplate.expire(key, REDIS_EXPIRE, TimeUnit.SECONDS);
         }
 
@@ -192,11 +194,11 @@ public class AiServiceImpl implements AiService {
         msg.setContent(content);
         msg.setCreatedAt(LocalDateTime.now());
         log.info(">>> AiMessage 对象: {}", msg);
-        // 存入redis
+        // 先存入mysql（获取自增ID后再缓存）
+        aiMessageMapper.insert(msg);
+        // 再存入redis
         redisTemplate.opsForList().rightPush(REDIS_CHAT_PREFIX + sessionId, msg);
         redisTemplate.expire(REDIS_CHAT_PREFIX+sessionId,REDIS_EXPIRE, TimeUnit.SECONDS);
-        // 存入mysql
-        aiMessageMapper.insert(msg);
     }
 
     private Long getCurrentUserId() {
