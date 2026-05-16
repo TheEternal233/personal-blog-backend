@@ -51,6 +51,12 @@ public class BlackListServiceImpl extends ServiceImpl<BlackListMapper, BlackList
 
     @Override
     public ResponseResult<Void> addBlackList(AddBlackListDTO addBlackListDTO) {
+        // 白名单用户禁止封号
+        if (!addBlackListDTO.getUserIds().isEmpty()
+                && addBlackListDTO.getUserIds().stream().anyMatch(uid -> uid.equals(BlackListConst.RATE_LIMIT_WHITELIST_UID))) {
+            return ResponseResult.failure("该用户为白名单用户，无法封禁");
+        }
+
         if (!addBlackListDTO.getUserIds().isEmpty()) {
             Long count = blackListMapper.selectCount(new LambdaQueryWrapper<BlackList>().in(BlackList::getUserId, addBlackListDTO.getUserIds()));
             if (count > 0) {

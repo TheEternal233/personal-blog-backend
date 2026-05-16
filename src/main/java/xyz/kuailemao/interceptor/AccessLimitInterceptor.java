@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import xyz.kuailemao.annotation.AccessLimit;
+import xyz.kuailemao.constants.BlackListConst;
 import xyz.kuailemao.constants.Const;
 import xyz.kuailemao.constants.RedisConst;
 import xyz.kuailemao.constants.SQLConst;
@@ -62,10 +63,22 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
             // 方法上面如果没有限流注解就直接通过
             if (accessLimit == null)
                 return result;
+
+            // 白名单用户跳过限流和封号检查
+            Long currentUserId = SecurityUtils.getUserId();
+            if (currentUserId != null && currentUserId.equals(BlackListConst.RATE_LIMIT_WHITELIST_UID)) {
+                return true;
+            }
+
+            // 白名单IP跳过限流和封号检查
+            String ip = IpUtils.getIpAddr(request);
+            if (BlackListConst.RATE_LIMIT_WHITELIST_IP.equals(ip)) {
+                return true;
+            }
+
             // 如果方法上有限流注解
             int seconds = accessLimit.seconds();
             int maxCount = accessLimit.maxCount();
-            String ip = IpUtils.getIpAddr(request);
             String method = request.getMethod();
             String uri = request.getRequestURI();
             String key = "limit:" + method + ":" + uri + ":" + ip;
