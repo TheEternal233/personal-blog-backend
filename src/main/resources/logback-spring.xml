@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%-40.40logger{39}) : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 文件输出（按日期滚动） -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/blog-backend.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/blog-backend.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %-40.40logger{39} : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ==================== 抑制敏感信息日志 ==================== -->
+
+    <!-- 抑制 RabbitMQ 连接日志中的用户名/IP泄露 -->
+    <logger name="org.springframework.amqp" level="WARN"/>
+    <logger name="com.rabbitmq" level="WARN"/>
+
+    <!-- 抑制 c3p0 连接池详细日志 -->
+    <logger name="com.mchange" level="WARN"/>
+
+    <!-- 抑制 Quartz 调度器详细日志 -->
+    <logger name="org.quartz" level="WARN"/>
+
+    <!-- 抑制 Spring Security 详细日志（避免泄露认证细节） -->
+    <logger name="org.springframework.security" level="WARN"/>
+
+    <!-- ==================== 环境区分 ==================== -->
+
+    <!-- 开发环境：输出到控制台，项目日志为 DEBUG -->
+    <springProfile name="dev">
+        <logger name="xyz.kuailemao" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 生产环境：输出到文件+控制台，项目日志为 INFO -->
+    <springProfile name="prod">
+        <logger name="xyz.kuailemao" level="INFO"/>
+        <root level="WARN">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- 默认（未指定 profile 时）：同 dev -->
+    <springProfile name="default">
+        <logger name="xyz.kuailemao" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>
