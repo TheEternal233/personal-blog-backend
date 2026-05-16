@@ -60,7 +60,7 @@ public class PhotoController {
             @RequestParam(value = "pageSize", defaultValue = "16") Long pageSize,
             @RequestParam(value = "parentId", required = false) Long parentId
     ) {
-        return ControllerUtils.messageHandler(() -> photoService.getBackPhotoList(pageNum, pageSize, parentId));
+        return ControllerUtils.messageHandler(() -> photoService.getFrontPhotoList(pageNum, pageSize, parentId));
     }
 
     @PreAuthorize("hasAnyAuthority('blog:album:create')")

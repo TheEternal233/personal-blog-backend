@@ -21,13 +21,22 @@ import java.util.List;
 public interface PhotoService extends IService<Photo> {
 
     /**
-     * 获取后台图片列表
+     * 获取后台图片列表（按当前用户隔离）
      * @param pageNum 当前页码
      * @param pageSize 每页数量
      * @param parentId 父相册id
      * @return 图片列表
      */
     PageVO<List<PhotoAndAlbumListVO>> getBackPhotoList(Long pageNum, Long pageSize, Long parentId);
+
+    /**
+     * 获取前台图片列表（公开，不按用户隔离）
+     * @param pageNum 当前页码
+     * @param pageSize 每页数量
+     * @param parentId 父相册id
+     * @return 图片列表
+     */
+    PageVO<List<PhotoAndAlbumListVO>> getFrontPhotoList(Long pageNum, Long pageSize, Long parentId);
 
     /**
      * 创建相册

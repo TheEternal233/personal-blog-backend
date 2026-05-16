@@ -48,9 +48,27 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 
     @Override
     public PageVO<List<PhotoAndAlbumListVO>> getBackPhotoList(Long pageNum, Long pageSize, Long parentId) {
+        Long userId = SecurityUtils.getUserId();
+        if (userId == null || userId == 0L) {
+            return new PageVO<>(List.of(), 0L);
+        }
+        return getPhotoList(pageNum, pageSize, parentId, userId);
+    }
+
+    @Override
+    public PageVO<List<PhotoAndAlbumListVO>> getFrontPhotoList(Long pageNum, Long pageSize, Long parentId) {
+        Long userId = SecurityUtils.getUserId();
+        if (userId == null || userId == 0L) {
+            return new PageVO<>(List.of(), 0L);
+        }
+        return getPhotoList(pageNum, pageSize, parentId, userId);
+    }
+
+    private PageVO<List<PhotoAndAlbumListVO>> getPhotoList(Long pageNum, Long pageSize, Long parentId, Long userId) {
         // 分页
         Page<Photo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Photo> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(Photo::getUserId, userId);
         if (null != parentId) {
             lambdaQueryWrapper.eq(Photo::getParentId, parentId);
         } else {
@@ -63,12 +81,12 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
         // 查询每个相册的封面
         for (Photo photo : page.getRecords()) {
             if (Objects.equals(photo.getType(), AlbumOrPhotoEnum.ALBUM.getCode())) {
-                Photo photoOne = photoMapper.selectOne(
-                        new LambdaQueryWrapper<Photo>()
-                                .eq(Photo::getParentId, photo.getId())
-                                .eq(Photo::getType, AlbumOrPhotoEnum.PHOTO.getCode())
-                                .last(ORDER_BY_CREATE_TIME_DESC).last(LIMIT_ONE_SQL)
-                );
+                LambdaQueryWrapper<Photo> coverWrapper = new LambdaQueryWrapper<Photo>()
+                        .eq(Photo::getParentId, photo.getId())
+                        .eq(Photo::getType, AlbumOrPhotoEnum.PHOTO.getCode())
+                        .eq(Photo::getUserId, userId)
+                        .last(ORDER_BY_CREATE_TIME_DESC).last(LIMIT_ONE_SQL);
+                Photo photoOne = photoMapper.selectOne(coverWrapper);
                 if (null != photoOne && StringUtils.isValidUrl(photoOne.getUrl())) {
                     page.getRecords().get(page.getRecords().indexOf(photo)).setUrl(photoOne.getUrl());
                 }else{
@@ -83,12 +101,12 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 
     @Override
     public ResponseResult<Void> createAlbum(PhotoAlbumDTO albumDTO) {
-        // ====================== 【修复重名】======================
-        // 判断当前相册下是否存在 同名相册 或 同名照片
+        Long currentUserId = SecurityUtils.getUserId();
+        // ====================== 【修复重名】按当前用户作用域校验 ======================
         LambdaQueryWrapper<Photo> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Photo::getName, albumDTO.getName());
+        queryWrapper.eq(Photo::getUserId, currentUserId);
 
-        // 关键修复
         if (albumDTO.getParentId() == null) {
             queryWrapper.isNull(Photo::getParentId);
         } else {
@@ -101,11 +119,11 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
         // ======================================================
 
         String albumUrl = "";
-        if (albumDTO.getParentId() != null && photoMapper.selectCount(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId())) > 0) {
-            albumUrl = photoMapper.selectOne(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId())).getUrl();
+        if (albumDTO.getParentId() != null && photoMapper.selectCount(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId()).eq(Photo::getUserId, currentUserId)) > 0) {
+            albumUrl = photoMapper.selectOne(new LambdaQueryWrapper<Photo>().eq(Photo::getId, albumDTO.getParentId()).eq(Photo::getUserId, currentUserId)).getUrl();
         }
         if (photoMapper.insert(Photo.builder()
-                .userId(SecurityUtils.getUserId())
+                .userId(currentUserId)
                 .parentId(albumDTO.getParentId())
                 .name(albumDTO.getName())
                 .description(albumDTO.getDescription())
@@ -126,9 +144,12 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
                 return ResponseResult.failure("上传文件不能为空");
             }
 
-            // ====================== 修复重名======================
+            Long currentUserId = SecurityUtils.getUserId();
+
+            // ====================== 修复重名：按当前用户作用域校验 ======================
             LambdaQueryWrapper<Photo> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Photo::getName, name);
+            queryWrapper.eq(Photo::getUserId, currentUserId);
             if (parentId == null) {
                 queryWrapper.isNull(Photo::getParentId);
             } else {
@@ -140,14 +161,21 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 
             String bannerUrl;
             if (StringUtils.isNotNull(parentId)) {
-                bannerUrl = photoMapper.selectById(parentId).getUrl().replaceFirst("^/", "");
+                // 校验父相册属于当前用户
+                Photo parentAlbum = photoMapper.selectOne(new LambdaQueryWrapper<Photo>()
+                        .eq(Photo::getId, parentId)
+                        .eq(Photo::getUserId, currentUserId));
+                if (parentAlbum == null) {
+                    return ResponseResult.failure("父相册不存在或无权限");
+                }
+                bannerUrl = parentAlbum.getUrl().replaceFirst("^/", "");
                 bannerUrl = fileUploadUtils.upload(UploadEnum.PHOTO_ALBUM, file, name, bannerUrl);
             } else {
                 bannerUrl = fileUploadUtils.upload(UploadEnum.PHOTO_ALBUM, file, name);
             }
 
             photoMapper.insert(Photo.builder()
-                    .userId(SecurityUtils.getUserId())
+                    .userId(currentUserId)
                     .parentId(parentId)
                     .name(name)
                     .url(bannerUrl)
@@ -166,6 +194,12 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
 
     @Override
     public ResponseResult<Void> updateAlbum(PhotoAlbumDTO albumDTO) {
+        Long currentUserId = SecurityUtils.getUserId();
+        // 校验所有权：该相册属于当前用户
+        Photo existingPhoto = photoMapper.selectById(albumDTO.getId());
+        if (existingPhoto == null || !existingPhoto.getUserId().equals(currentUserId)) {
+            return ResponseResult.failure("无权限修改该相册");
+        }
         if (
                 photoMapper.updateById(Photo.builder()
                         .id(albumDTO.getId())
@@ -181,6 +215,13 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
     @Transactional
     @Override
     public ResponseResult<Void> deletePhotoOrAlbum(DeletePhotoOrAlbumDTO deletePhotoOrAlbum) {
+        Long currentUserId = SecurityUtils.getUserId();
+        // 校验所有权
+        Photo existingPhoto = photoMapper.selectById(deletePhotoOrAlbum.getId());
+        if (existingPhoto == null || !existingPhoto.getUserId().equals(currentUserId)) {
+            return ResponseResult.failure("无权限删除该相册或照片");
+        }
+
         if (Objects.equals(deletePhotoOrAlbum.getType(), AlbumOrPhotoEnum.ALBUM.getCode())) {
             // 是否存在子相册
             if (photoMapper.selectCount(new LambdaQueryWrapper<Photo>().eq(Photo::getParentId, deletePhotoOrAlbum.getId())) > 0) {
@@ -193,7 +234,7 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
             return ResponseResult.failure();
         } else {
             // 查询照片名称
-            Photo photo = photoMapper.selectById(deletePhotoOrAlbum.getId());
+            Photo photo = existingPhoto;
             // 查询父相册
             if (StringUtils.isNotNull(photo.getParentId())) {
                 Photo album = photoMapper.selectById(deletePhotoOrAlbum.getParentId());
