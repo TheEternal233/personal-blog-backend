@@ -63,6 +63,7 @@ public class AiServiceImpl implements AiService {
         Long userId = getCurrentUserId();
         session.setUserId(userId);
         session.setPreview("嗨，你好呀！有什么可以帮到你的吗？");
+        session.setTitle(""); // 初始标题为空，首次聊天时生成
         session.setCreatedAt(LocalDateTime.now());
         session.setUpdatedAt(LocalDateTime.now());
         aiSessionMapper.insert(session);
@@ -128,11 +129,12 @@ public class AiServiceImpl implements AiService {
             AiSession newSession = new AiSession();
             newSession.setId(sessionId);
             newSession.setUserId(getCurrentUserId());
-            newSession.setTitle("AI对话");
+            newSession.setTitle(""); // 初始标题为空，首次聊天时生成
             newSession.setPreview("这是AI对话预览");
             newSession.setCreatedAt(LocalDateTime.now());
             newSession.setUpdatedAt(LocalDateTime.now());
             aiSessionMapper.insert(newSession);
+            existSession = newSession;
         }
 
         saveMessage(sessionId, "user", userMessage);
@@ -147,6 +149,12 @@ public class AiServiceImpl implements AiService {
                 .content();
 
         saveMessage(sessionId, "assistant", reply);
+        
+        // 如果是首次聊天（标题为空），生成标题
+        if (existSession.getTitle() == null || existSession.getTitle().isEmpty()) {
+            generateTitleFromFirstMessage(sessionId, userMessage, reply);
+        }
+        
         return reply;
     }
 
@@ -210,5 +218,51 @@ public class AiServiceImpl implements AiService {
         }
         // 未登录或获取失败时，返回默认用户ID（测试用）
         return 1L;
+    }
+
+    /**
+     * 根据用户首条消息和AI回复生成会话标题
+     * @param sessionId 会话ID
+     * @param userMessage 用户首条消息
+     * @param aiReply AI回复
+     */
+    private void generateTitleFromFirstMessage(Long sessionId, String userMessage, String aiReply) {
+        try {
+            // 使用AI生成简短标题
+            String prompt = String.format(
+                "请根据以下用户问题和AI回复，生成一个简短的会话标题（不超过15个字）。\n" +
+                "用户问题：%s\n" +
+                "AI回复：%s\n" +
+                "只需返回标题，不要其他内容。",
+                userMessage.length() > 100 ? userMessage.substring(0, 100) + "..." : userMessage,
+                aiReply.length() > 100 ? aiReply.substring(0, 100) + "..." : aiReply
+            );
+            
+            String generatedTitle = zhipuAiChatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+            
+            // 清理标题：去除多余空白字符
+            if (generatedTitle != null) {
+                generatedTitle = generatedTitle.trim();
+                // 限制标题长度，超过15个字符则截断并添加省略号
+                if (generatedTitle.length() > 15) {
+                    generatedTitle = generatedTitle.substring(0, 15) + "...";
+                }
+            }
+            
+            // 如果生成失败，使用默认标题
+            if (generatedTitle == null || generatedTitle.isEmpty()) {
+                generatedTitle = "AI对话";
+            }
+            
+            // 更新会话标题
+            updateSessionTitle(sessionId, generatedTitle);
+            log.info("会话 {} 标题已生成: {}", sessionId, generatedTitle);
+        } catch (Exception e) {
+            log.error("生成会话标题失败，使用默认标题", e);
+            updateSessionTitle(sessionId, "AI对话");
+        }
     }
 }
