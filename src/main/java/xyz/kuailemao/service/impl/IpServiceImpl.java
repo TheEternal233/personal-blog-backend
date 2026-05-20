@@ -21,6 +21,8 @@ import xyz.kuailemao.mapper.BlackListMapper;
 import xyz.kuailemao.mapper.LogMapper;
 import xyz.kuailemao.mapper.LoginLogMapper;
 import xyz.kuailemao.mapper.UserMapper;
+import xyz.kuailemao.utils.IpUtils;
+
 import xyz.kuailemao.service.IpService;
 
 import java.util.Date;
@@ -39,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class IpServiceImpl implements IpService, DisposableBean {
 
-    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(1, 1,
+    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(4, 8,
             0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(500),
             new NamedThreadFactory("refresh-ipDetail", null, false,
@@ -247,6 +249,15 @@ public class IpServiceImpl implements IpService, DisposableBean {
     }
 
     private static IpDetail TryGetIpDetailOrNullTreeTimes(String ip) {
+        // 内网IP不查询外部API，直接返回内网IP信息
+        if (IpUtils.internalIp(ip)) {
+            return IpDetail.builder()
+                    .ip(ip)
+                    .city("内网IP")
+                    .country("中国")
+                    .region("XX")
+                    .build();
+        }
         for (int i = 0; i < 3; i++) {
             IpDetail ipDetail = getIpDetailOrNull(ip);
             if (Objects.nonNull(ipDetail)) {

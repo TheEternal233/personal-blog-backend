@@ -191,8 +191,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 .orElse(0L);
 
         return article.asViewObject(ArticleDetailVO.class, vo -> {
-            vo.setCategoryName(category.getCategoryName());
-            vo.setCategoryId(category.getId());
+            vo.setCategoryName(category != null ? category.getCategoryName() : "未分类");
+            vo.setCategoryId(category != null ? category.getId() : 0);
             vo.setTags(tags.stream().map(tag -> tag.asViewObject(TagVO.class)).toList());
 
             // 直接使用缓存数据
