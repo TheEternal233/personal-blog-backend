@@ -22,6 +22,8 @@ import xyz.kuailemao.mapper.AiMessageMapper;
 import xyz.kuailemao.mapper.AiSessionMapper;
 import xyz.kuailemao.mapper.UserMapper;
 import xyz.kuailemao.service.AiService;
+import xyz.kuailemao.utils.SecurityUtils;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -60,7 +62,7 @@ public class AiServiceImpl implements AiService {
     public AiSession createSession(AiSession session) {
 
         // 从 SecurityContext 获取当前用户 ID
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getUserId();
         session.setUserId(userId);
         session.setPreview("嗨，你好呀！有什么可以帮到你的吗？");
         session.setTitle(""); // 初始标题为空，首次聊天时生成
@@ -72,7 +74,7 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public List<AiSession> getSessionList() {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getUserId();
         return aiSessionMapper.selectList(
                 new LambdaQueryWrapper<AiSession>()
                         .eq(AiSession::getUserId, userId)
@@ -81,7 +83,7 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public AiSession getSessionById(Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getUserId();
         return aiSessionMapper.selectOne(
                 new LambdaQueryWrapper<AiSession>()
                         .eq(AiSession::getId, id)
@@ -100,7 +102,7 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public void deleteSession(Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getUserId();
         // 校验是否属于当前用户
         AiSession session = aiSessionMapper.selectOne(
                 new LambdaQueryWrapper<AiSession>()
@@ -128,7 +130,7 @@ public class AiServiceImpl implements AiService {
             // 会话不存在，自动创建
             AiSession newSession = new AiSession();
             newSession.setId(sessionId);
-            newSession.setUserId(getCurrentUserId());
+            newSession.setUserId(SecurityUtils.getUserId());
             newSession.setTitle(""); // 初始标题为空，首次聊天时生成
             newSession.setPreview("这是AI对话预览");
             newSession.setCreatedAt(LocalDateTime.now());
@@ -209,16 +211,6 @@ public class AiServiceImpl implements AiService {
         redisTemplate.expire(REDIS_CHAT_PREFIX+sessionId,REDIS_EXPIRE, TimeUnit.SECONDS);
     }
 
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails) {
-            String username = userDetails.getUsername();
-            // 根据用户名去 UserMapper 里查用户ID（需要注入 UserMapper）
-            return userMapper.selectIdByUsername(username);
-        }
-        // 未登录或获取失败时，返回默认用户ID（测试用）
-        return 1L;
-    }
 
     /**
      * 根据用户首条消息和AI回复生成会话标题
