@@ -5,16 +5,15 @@
 
 🌐 项目地址：
 
-后端：https://gitee.com/theeternalzz/personal-blog---backend
+后端：https://gitee.com/theeternalzz/personal-blog---backend或https://github.com/TheEternal233/personal-blog-backend
 
-前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end
+前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end或https://github.com/TheEternal233/personal-blog-frontend
 
-前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin
+前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin或https://github.com/TheEternal233/personal-blog-admin
 
 ## 主页展示
-![输入图片说明](imagesimage.png)
-![输入图片说明](imagesimage.png)
-
+![输入图片说明](images/%E4%B8%BB%E9%A1%B5.png)
+![输入图片说明](images/%E4%B8%BB%E9%A1%B52.png)
 ## ✨ 项目亮点
 
 🧠 深度集成 LLM：基于 Spring AI 接入智谱 GLM-4，支持上下文感知的多轮对话，记忆持久化保障对话连贯。
@@ -42,12 +41,9 @@
 - 多轮对话记忆：基于 ChatMemory，将对话历史通过 AiSession 和 AiMessage 持久化至数据库，每次请求自动加载上下文。
 - Function Calling：通过 AiFunctionUtil 将本地方法注册为 AI 可调用的 Function，AI 根据用户意图自主决定是否调用工具。
 - RAG 知识库检索：文档导入时自动调用智谱 embedding-2 进行向量化存入 Qdrant；提问时先进行语义检索，将相关文档作为 Prompt 上下文喂给 GLM-4。
+![输入图片说明](images/AI.png)
 
-![输入图片说明](imagesimage.png)
-
-![输入图片说明](imagesimage.png)
-
-
+![输入图片说明](images/%E8%AE%B0%E5%BF%86%E5%8A%9F%E8%83%BD.png)
 ### 📝 博客内容管理模块
 
 - 文章/分类/标签：基于 MyBatis-Plus 实现高效的关联查询与 CRUD。
