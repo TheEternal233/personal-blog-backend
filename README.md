@@ -1,132 +1,127 @@
+#智墨 - AI 智能博客系统
 
+> 一个融合了前沿 AI 能力的现代化博客系统，不仅具备完善的 CMS 内容管理能力，更通过 Spring AI 赋予了博客“思考”与“执行”的能力。
 
-# 个人博客后端系统 (Personal Blog Backend)
+🌐 项目地址：
 
-一个基于 Spring Boot 构建的现代化个人博客后端管理系统，提供完整的文章管理、用户认证、评论互动等功能支持。
+后端：https://gitee.com/theeternalzz/personal-blog---backend
 
-## 技术栈
+前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end
 
-- **框架**: Spring Boot 3.x
-- **数据库**: MyBatis Plus
-- **缓存**: Redis
-- **消息队列**: RabbitMQ
-- **对象存储**: MinIO
-- **安全**: Spring Security + JWT
-- **API文档**: Knife4j (Swagger)
+前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin
 
-## 主要功能
+##✨ 项目亮点
 
-### 文章管理
-- 文章发布、编辑、删除
-- 文章分类与标签管理
-- 文章搜索（标题/内容）
-- 热门/推荐/随机文章
-- 文章访问统计
+🧠 深度集成 LLM：基于 Spring AI 接入智谱 GLM-4，支持上下文感知的多轮对话，记忆持久化保障对话连贯。
+🛠️ Function Calling：让 AI 不再只是“说话”，通过自定义工具类，AI 能够主动调用本地业务接口（获取时间、生成密码等），具备实际执行能力。
+📚 RAG 知识库增强：集成 Qdrant 向量数据库与 Embedding 模型，私有知识向量化存储，语义级精准检索，有效抑制大模型幻觉。
+🛡️ 非侵入式日志架构：AOP + RabbitMQ 构建异步日志系统，业务代码零侵入，实现日志采集与落库的削峰填谷。
+🔐 双模式认证体系：JWT + OAuth2.0，支持 Gitee/GitHub 第三方一键登录，兼顾安全与便捷。
 
-### 用户系统
-- 用户注册/登录
-- 第三方登录（Gitee、GitHub）
-- 用户信息管理
-- 邮箱验证
+##🛠️ 技术栈
 
-### 互动功能
-- 评论系统（支持嵌套评论）
-- 点赞/收藏
-- 留言板
-- 友链申请
+| 分类     | 技术                                                         |
+| -------- | ------------------------------------------------------------ |
+| 核心框架 | Spring Boot                                                  |
+| AI 框架  | Spring AI (RAG, Function Calling, ChatMemory)                |
+| 大模型   | 智谱 GLM-4 (对话), 智谱 Embedding-2 (向量化)                 |
+| 数据存储 | MySQL (业务数据), Qdrant (向量数据), Redis (缓存/会话), MinIO (对象存储) |
+| 中间件   | RabbitMQ (异步日志/消息削峰)                                 |
+| ORM 框架 | MyBatis-Plus                                                 |
+| 安全认证 | Spring Security, JWT, OAuth2.0                               |
 
-### 系统管理
-- 角色与权限管理
-- 菜单管理
-- 黑名单管理
-- 操作日志
-- 登录日志
+##🚀 核心功能模块
 
-### 服务监控
-- 服务器状态监控（CPU、内存、JVM、磁盘）
+###🤖 AI 智能助手模块
 
-## 项目结构
+- 多轮对话记忆：基于 ChatMemory，将对话历史通过 AiSession 和 AiMessage 持久化至数据库，每次请求自动加载上下文。
+- Function Calling：通过 AiFunctionUtil 将本地方法注册为 AI 可调用的 Function，AI 根据用户意图自主决定是否调用工具。
+- RAG 知识库检索：文档导入时自动调用智谱 embedding-2 进行向量化存入 Qdrant；提问时先进行语义检索，将相关文档作为 Prompt 上下文喂给 GLM-4。
 
-```
-src/main/java/xyz/kuailemao/
-├── annotation/          # 自定义注解
-├── aop/              # 切面编程
-├── config/            # 配置类
-├── constants/         # 常量定义
-├── controller/        # 控制器
-├── domain/           # 实体与DTO
-│   ├── dto/         # 数据传输对象
-│   ├── entity/       # 实体类
-│   ├── response/    # 响应对象
-│   └── vo/         # 视图对象
-├── enums/            # 枚举类
-├── exceptions/       # 异常处理
-├── filter/          # 过滤器
-├── handler/        # 处理器
-├── interceptor/    # 拦截器
-├── mapper/         # 数据访问层
-├── service/       # 业务逻辑层
-│   └── impl/     # 服务实现
-├── quartz/        # 定时任务
-└── utils/        # 工具类
-```
+🖼️ 截图占位符 - AI 多轮对话界面
 
-## 快速开始
+🖼️ 截图占位符 - AI 调用本地 Function 效果
 
-### 环境要求
+🖼️ 截图占位符 - RAG 知识库检索效果
 
-- JDK 17+
-- MySQL 8.0+
-- Redis 6.0+
-- RabbitMQ 3.8+
-- MinIO（可选）
+###📝 博客内容管理模块
 
-### 配置文件
+- 文章/分类/标签：基于 MyBatis-Plus 实现高效的关联查询与 CRUD。
+- 图片资源管理：集成 MinIO 作为对象存储，支持文章配图的上传与回显。
+- 评论系统：支持层级评论与交互。
 
-在 `src/main/resources/application.yml` 中配置数据库、Redis 等连接信息：
+🖼️ 截图占位符 - 文章发布/编辑界面
 
-```yaml
-server:
-  port: 8088
+###🛡️ 系统管理与安全模块
 
+- 异步日志系统：自定义 @LogAnnotation，利用 AOP 切面捕获操作日志，通过 RabbitMQ 异步消费落库，实现核心业务与日志记录的完全解耦。
+- 双模式认证：本地账号 JWT 认证 + Gitee/GitHub OAuth2.0 授权登录。
+
+🖼️ 截图占位符 - 日志管理列表（展示多条件筛选）
+
+🖼️ 截图占位符 - 第三方登录流程
+
+##⚙️ 项目运行指南
+
+环境依赖:
+
+> - JDK 17+
+> - MySQL 8.0+
+> - Redis 6.0+
+> - RabbitMQ 3.8+
+> - MinIO
+> - Qdrant (推荐使用 Docker 部署)
+
+配置修改
+
+克隆项目后，需修改 **application.yml** 中的相关配置
+
+###数据库配置
+
+~~~java
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/blog
+    url: jdbc:mysql://localhost:3306/your_db_name
     username: root
     password: your_password
-  redis:
-    host: localhost
-    port: 6379
-```
+~~~
 
-### 运行项目
+###Redis 配置
 
-```bash
-# 编译打包
-mvn clean package -DskipTests
+~~~java
+  data:
+    redis:
+      host: localhost
+      port: 6379
+~~~
 
-# 运行
-java -jar blog-backend-0.0.1-SNAPSHOT.jar
-```
+###MinIO 配置
 
-### Docker 部署
+~~~java
+minio:
+  endpoint: http://localhost:9000
+  access-key: your-access-key
+  secret-key: your-secret-key
+~~~
 
-```bash
-docker build -t personal-blog-backend .
-docker run -d -p 8088:8088 --name blog-backend personal-blog-backend
-```
+###智谱 AI 配置 (需自行申请 API Key)
 
-## API 文档
+~~~java
+spring:
+  ai:
+    zhipuai:
+      api-key: your-zhipuai-api-key
+~~~
 
-项目启动后访问: `http://localhost:8088/doc.html`
+###Qdant 配置
 
-## 请求头说明
+~~~java
+qdrant:
+  host: localhost
+  port: 6333
+~~~
 
-| 头名称 | 值 | 说明 |
-|--------|-----|------|
-| X-Client-Type | Frontend | 前台请求 |
-| X-Client-Type | Backend | 后台请求 |
+**初始化数据库**
+执行项目中的 SQL 初始化脚本（如有，请指明路径，如 doc/sql/init.sql）。
 
-## 许可证
-
-MIT License
+本项目采用 MIT License 开源协议。
