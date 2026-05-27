@@ -2,6 +2,7 @@
 
 > 一个融合了前沿 AI 能力的现代化博客系统，不仅具备完善的 CMS 内容管理能力，更通过 Spring AI 赋予了博客“思考”与“执行”的能力。
 
+
 🌐 项目地址：
 
 后端：https://gitee.com/theeternalzz/personal-blog---backend
@@ -9,6 +10,10 @@
 前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end
 
 前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin
+
+## 主页展示
+![输入图片说明](imagesimage.png)
+![输入图片说明](imagesimage.png)
 
 ## ✨ 项目亮点
 
@@ -38,11 +43,10 @@
 - Function Calling：通过 AiFunctionUtil 将本地方法注册为 AI 可调用的 Function，AI 根据用户意图自主决定是否调用工具。
 - RAG 知识库检索：文档导入时自动调用智谱 embedding-2 进行向量化存入 Qdrant；提问时先进行语义检索，将相关文档作为 Prompt 上下文喂给 GLM-4。
 
-🖼️ 截图占位符 - AI 多轮对话界面
+![输入图片说明](imagesimage.png)
 
-🖼️ 截图占位符 - AI 调用本地 Function 效果
+![输入图片说明](imagesimage.png)
 
-🖼️ 截图占位符 - RAG 知识库检索效果
 
 ### 📝 博客内容管理模块
 
