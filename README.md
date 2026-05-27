@@ -1,4 +1,4 @@
-#智墨 - AI 智能博客系统
+# 智墨 - AI 智能博客系统
 
 > 一个融合了前沿 AI 能力的现代化博客系统，不仅具备完善的 CMS 内容管理能力，更通过 Spring AI 赋予了博客“思考”与“执行”的能力。
 
@@ -10,7 +10,7 @@
 
 前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin
 
-##✨ 项目亮点
+## ✨ 项目亮点
 
 🧠 深度集成 LLM：基于 Spring AI 接入智谱 GLM-4，支持上下文感知的多轮对话，记忆持久化保障对话连贯。
 🛠️ Function Calling：让 AI 不再只是“说话”，通过自定义工具类，AI 能够主动调用本地业务接口（获取时间、生成密码等），具备实际执行能力。
@@ -18,7 +18,7 @@
 🛡️ 非侵入式日志架构：AOP + RabbitMQ 构建异步日志系统，业务代码零侵入，实现日志采集与落库的削峰填谷。
 🔐 双模式认证体系：JWT + OAuth2.0，支持 Gitee/GitHub 第三方一键登录，兼顾安全与便捷。
 
-##🛠️ 技术栈
+## 🛠️ 技术栈
 
 | 分类     | 技术                                                         |
 | -------- | ------------------------------------------------------------ |
@@ -30,9 +30,9 @@
 | ORM 框架 | MyBatis-Plus                                                 |
 | 安全认证 | Spring Security, JWT, OAuth2.0                               |
 
-##🚀 核心功能模块
+## 🚀 核心功能模块
 
-###🤖 AI 智能助手模块
+### 🤖 AI 智能助手模块
 
 - 多轮对话记忆：基于 ChatMemory，将对话历史通过 AiSession 和 AiMessage 持久化至数据库，每次请求自动加载上下文。
 - Function Calling：通过 AiFunctionUtil 将本地方法注册为 AI 可调用的 Function，AI 根据用户意图自主决定是否调用工具。
@@ -44,7 +44,7 @@
 
 🖼️ 截图占位符 - RAG 知识库检索效果
 
-###📝 博客内容管理模块
+### 📝 博客内容管理模块
 
 - 文章/分类/标签：基于 MyBatis-Plus 实现高效的关联查询与 CRUD。
 - 图片资源管理：集成 MinIO 作为对象存储，支持文章配图的上传与回显。
@@ -52,7 +52,7 @@
 
 🖼️ 截图占位符 - 文章发布/编辑界面
 
-###🛡️ 系统管理与安全模块
+### 🛡️ 系统管理与安全模块
 
 - 异步日志系统：自定义 @LogAnnotation，利用 AOP 切面捕获操作日志，通过 RabbitMQ 异步消费落库，实现核心业务与日志记录的完全解耦。
 - 双模式认证：本地账号 JWT 认证 + Gitee/GitHub OAuth2.0 授权登录。
@@ -61,7 +61,7 @@
 
 🖼️ 截图占位符 - 第三方登录流程
 
-##⚙️ 项目运行指南
+## ⚙️ 项目运行指南
 
 环境依赖:
 
@@ -76,7 +76,7 @@
 
 克隆项目后，需修改 **application.yml** 中的相关配置
 
-###数据库配置
+### 数据库配置
 
 ~~~java
 spring:
@@ -86,7 +86,7 @@ spring:
     password: your_password
 ~~~
 
-###Redis 配置
+### Redis 配置
 
 ~~~java
   data:
@@ -95,7 +95,7 @@ spring:
       port: 6379
 ~~~
 
-###MinIO 配置
+### MinIO 配置
 
 ~~~java
 minio:
@@ -104,7 +104,7 @@ minio:
   secret-key: your-secret-key
 ~~~
 
-###智谱 AI 配置 (需自行申请 API Key)
+### 智谱 AI 配置 (需自行申请 API Key)
 
 ~~~java
 spring:
@@ -113,7 +113,7 @@ spring:
       api-key: your-zhipuai-api-key
 ~~~
 
-###Qdant 配置
+### Qdant 配置
 
 ~~~java
 qdrant:
