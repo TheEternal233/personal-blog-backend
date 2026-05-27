@@ -5,11 +5,11 @@
 
 🌐 项目地址：
 
-后端：https://gitee.com/theeternalzz/personal-blog---backend或https://github.com/TheEternal233/personal-blog-backend
+后端：https://gitee.com/theeternalzz/personal-blog---backend 或 https://github.com/TheEternal233/personal-blog-backend
 
-前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end或https://github.com/TheEternal233/personal-blog-frontend
+前端（用户）：https://gitee.com/theeternalzz/personal-blog---front-end 或 https://github.com/TheEternal233/personal-blog-frontend
 
-前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin或https://github.com/TheEternal233/personal-blog-admin
+前端（管理）：https://gitee.com/theeternalzz/personal-blog-admin 或 https://github.com/TheEternal233/personal-blog-admin
 
 ## 主页展示
 ![输入图片说明](images/%E4%B8%BB%E9%A1%B5.png)
@@ -50,8 +50,15 @@
 - 图片资源管理：集成 MinIO 作为对象存储，支持文章配图的上传与回显。
 - 评论系统：支持层级评论与交互。
 
-🖼️ 截图占位符 - 文章发布/编辑界面
+文章编辑
+![输入图片说明](images/%E6%96%87%E7%AB%A0%E7%BC%96%E8%BE%91.png)
+文章详情
+![输入图片说明](images/%E6%96%87%E7%AB%A0%E8%AF%A6%E6%83%85.png)
+文章分类
+![输入图片说明](images/%E6%96%87%E7%AB%A0%E5%88%86%E7%B1%BB.png)
 
+### 相册
+![输入图片说明](images/%E6%A0%91%E6%B4%9E.png)
 ### 🛡️ 系统管理与安全模块
 
 - 异步日志系统：自定义 @LogAnnotation，利用 AOP 切面捕获操作日志，通过 RabbitMQ 异步消费落库，实现核心业务与日志记录的完全解耦。
@@ -61,6 +68,13 @@
 
 🖼️ 截图占位符 - 第三方登录流程
 
+### 其他功能
+树洞
+![输入图片说明](images/%E6%A0%91%E6%B4%9E.png)
+留言板
+![输入图片说明](images/%E7%95%99%E8%A8%80%E6%9D%BF.png)
+时间轴
+![输入图片说明](images/%E6%97%B6%E9%97%B4%E8%BD%B4.png)
 ## ⚙️ 项目运行指南
 
 环境依赖:
