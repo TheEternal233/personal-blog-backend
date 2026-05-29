@@ -55,7 +55,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
+    url: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -124,7 +124,7 @@ spring:
           dataSource:
             quartz_jobs:
               driver: com.mysql.cj.jdbc.Driver
-              URL: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
+              URL: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
               user: ${DB_USERNAME}
               password: ${DB_PASSWORD}
               maxConnections: 10
@@ -134,7 +134,7 @@ mail:
   from: 2950355750@qq.com
   link:
     apply:
-      redirect-uri: http://localhost:8088/link/email/apply
+      redirect-uri: http://82.156.225.4:8088/link/email/apply
   article-email-notice: true
   article-reply-notice: false
   message-email-notice: false
@@ -161,14 +161,14 @@ mybatis-plus:
 
 web:
   index:
-    path: http://localhost:99/
+    path: http://82.156.225.4:99/
 
 # CORS 白名单，仅允许这些 Origin 跨域访问（逗号分隔）
 cors:
-  allowed-origins: http://localhost:99,http://localhost:9988,http://127.0.0.1:99,http://127.0.0.1:9988,${CORS_ORIGIN_PROD:}
+  allowed-origins: http://localhost:99,http://localhost:9988,http://127.0.0.1:99,http://127.0.0.1:9988,http://82.156.225.4:99,${CORS_ORIGIN_PROD:}
 
 minio:
-  endpoint: http://192.168.100.132:9000
+  endpoint: http://82.156.225.4:9000
   accessKey: ${MINIO_USERNAME}
   secretKey: ${MINIO_PASSWORD}
   bucketName: blog
@@ -177,8 +177,8 @@ oauth:
   gitee:
     clientId: ${GITEE_CLIENT_ID}
     clientSecret: ${GITEE_CLIENT_SECRET}
-    redirectUri: http://localhost:8088/oauth/gitee/callback
+    redirectUri: http://82.156.225.4:8088/oauth/gitee/callback
   github:
     clientId: ${GITHUB_CLIENT_ID}
     clientSecret: ${GITHUB_CLIENT_SECRET}
-    redirectUri: http://localhost:8088/oauth/github/callback
+    redirectUri: http://82.156.225.4:8088/oauth/github/callback

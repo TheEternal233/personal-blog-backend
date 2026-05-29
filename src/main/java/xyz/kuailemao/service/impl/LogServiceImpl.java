@@ -53,12 +53,21 @@ public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogSe
         return PageVO.builder().page(logVOS).total(page.getTotal()).build();
     }
 
+/**
+ * 删除日志信息的方法
+ * 使用@Transactional注解确保事务的完整性
+ * @param logDeleteDTO 包含要删除的日志ID集合的数据传输对象
+ * @return 返回操作结果，成功返回ResponseResult.success()，失败返回ResponseResult.failure()
+ */
     @Transactional
     @Override
     public ResponseResult<Void> deleteLog(LogDeleteDTO logDeleteDTO) {
+    // 调用removeByIds方法根据ID集合删除日志记录
         if (this.removeByIds(logDeleteDTO.getIds())) {
+        // 如果删除成功，返回成功响应
             return ResponseResult.success();
         }
+    // 如果删除失败，返回失败响应
         return ResponseResult.failure();
     }
 
