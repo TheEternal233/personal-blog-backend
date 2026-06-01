@@ -1,8 +1,7 @@
 # 智墨 - AI 智能博客系统
 
 > 一个融合了前沿 AI 能力的现代化博客系统，不仅具备完善的 CMS 内容管理能力，更通过 Spring AI 赋予了博客“思考”与“执行”的能力。
-
-
+> 线上地址：http://82.156.225.4/
 🌐 项目地址：
 
 后端：https://gitee.com/theeternalzz/personal-blog---backend 或 https://github.com/TheEternal233/personal-blog-backend
