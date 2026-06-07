@@ -7,8 +7,9 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,7 @@ import java.util.List;
 @RestController
 @RequestMapping("leaveWord")
 @Validated
+@Slf4j
 @Tag(name = "留言板", description = "留言板相关接口")
 public class LeaveWordController {
 
@@ -55,7 +57,9 @@ public class LeaveWordController {
     @Operation(summary = "用户留言")
     @PostMapping("/auth/userLeaveWord")
     @AccessLimit(seconds = 60, maxCount = 10)
-    public ResponseResult<Void> userLeaveWord(@RequestBody @NotNull String content) {
+    public ResponseResult<Void> userLeaveWord(HttpServletRequest request) {
+        String content = ControllerUtils.extractContent(request);
+        log.info("用户留言:{}",content);
         return leaveWordService.userLeaveWord(content);
     }
 

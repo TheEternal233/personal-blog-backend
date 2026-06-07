@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import xyz.kuailemao.domain.response.ResponseResult;
@@ -51,6 +52,12 @@ public class GlobalExceptionControllerHandler {
     public ResponseResult<Void> handlerBlackListException(BlackListException e){
         log.error("黑名单异常:{}({})", e.getMessage(), e.getStackTrace());
         return ResponseResult.failure(RespEnum.BLACK_LIST_ERROR.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseResult<Void> handlerMissingServletRequestParameterException(MissingServletRequestParameterException e){
+        log.warn("请求参数缺失: 缺少必需参数 '{}'({})", e.getParameterName(), e.getMessage());
+        return ResponseResult.failure(RespEnum.PARAM_ERROR.getCode(), "缺少必需参数: " + e.getParameterName());
     }
 
     // 最大的异常，防止出现其他不明异常无法处理

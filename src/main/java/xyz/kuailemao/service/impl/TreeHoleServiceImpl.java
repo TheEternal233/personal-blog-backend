@@ -38,6 +38,9 @@ public class TreeHoleServiceImpl extends ServiceImpl<TreeHoleMapper, TreeHole> i
 
     @Override
     public ResponseResult<Void> addTreeHole(String content) {
+        //手动检验非空与长度
+        if(content==null||content.trim().isEmpty()) return ResponseResult.failure("内容不能为空");
+        if(content.length()>2000) return ResponseResult.failure("内容过长");
         if (this.save(TreeHole.builder().userId(SecurityUtils.getUserId()).content(content).build())) {
             return ResponseResult.success();
         }

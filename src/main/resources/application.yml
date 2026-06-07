@@ -4,7 +4,7 @@ spring:
   config:
     import: classpath:application-secret.yml
   profiles:
-    active: dev
+    active: prod
   ai:
     #向量数据库
     vectorstore:
@@ -55,7 +55,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://82.156.225.4:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -124,7 +124,7 @@ spring:
           dataSource:
             quartz_jobs:
               driver: com.mysql.cj.jdbc.Driver
-              URL: jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+              URL: jdbc:mysql://82.156.225.4:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
               user: ${DB_USERNAME}
               password: ${DB_PASSWORD}
               maxConnections: 10
@@ -161,11 +161,11 @@ mybatis-plus:
 
 web:
   index:
-    path: http://82.156.225.4:99/
+    path: http://82.156.225.4/
 
 # CORS 白名单，仅允许这些 Origin 跨域访问（逗号分隔）
 cors:
-  allowed-origins: http://localhost:99,http://localhost:9988,http://127.0.0.1:99,http://127.0.0.1:9988,http://82.156.225.4:99,${CORS_ORIGIN_PROD:}
+  allowed-origins: http://82.156.225.4,http://82.156.225.4/admin,http://82.156.225.4:99,http://82.156.225.4:6678
 
 minio:
   endpoint: http://82.156.225.4:9000

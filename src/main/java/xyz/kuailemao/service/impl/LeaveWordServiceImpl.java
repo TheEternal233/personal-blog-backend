@@ -81,11 +81,11 @@ public class LeaveWordServiceImpl extends ServiceImpl<LeaveWordMapper, LeaveWord
 
     @Override
     public ResponseResult<Void> userLeaveWord(String content) {
-        String parse = (String) JSON.parse(content);
-        if (parse.length() > FunctionConst.LEAVE_WORD_CONTENT_LENGTH) {
-            return ResponseResult.failure("留言内容过长");
+
+        if (content==null||content.length() > FunctionConst.LEAVE_WORD_CONTENT_LENGTH) {
+            return ResponseResult.failure("留言内容不合法或过长");
         }
-        LeaveWord build = LeaveWord.builder().content(parse)
+        LeaveWord build = LeaveWord.builder().content(content)
                 .userId(SecurityUtils.getUserId()).build();
 
         if (this.save(build)){

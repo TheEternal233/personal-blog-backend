@@ -1,11 +1,11 @@
 package xyz.kuailemao.controller;
 
-import com.alibaba.fastjson.JSON;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +31,7 @@ import java.util.List;
 @RestController
 @Tag(name = "树洞相关接口")
 @RequestMapping("/treeHole")
+@Slf4j
 @Validated
 public class TreeHoleController {
 
@@ -41,8 +42,10 @@ public class TreeHoleController {
     @Operation(summary = "添加树洞")
     @AccessLimit(seconds = 60, maxCount = 60)
     @PostMapping("/auth/addTreeHole")
-    public ResponseResult<Void> addTreeHole(@Valid @NotNull @RequestBody String content) {
-        return treeHoleService.addTreeHole(JSON.parseObject(content).getString("content"));
+    public ResponseResult<Void> addTreeHole(HttpServletRequest request) {
+        String content = ControllerUtils.extractContent(request);
+        log.info("添加树洞:{}",content);
+        return treeHoleService.addTreeHole(content);
     }
 
     @Operation(summary = "查看树洞")
