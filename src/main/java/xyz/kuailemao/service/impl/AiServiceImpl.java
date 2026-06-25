@@ -34,8 +34,8 @@ import java.util.stream.Collectors;
 @Service
 public class AiServiceImpl implements AiService {
 
-    @Resource(name = "zhipuAiChatClient")
-    private ChatClient zhipuAiChatClient;
+    @Resource(name = "aiChatClient")
+    private ChatClient aiChatClient;
 
     @Resource
     private ChatMemory chatMemory;
@@ -141,7 +141,7 @@ public class AiServiceImpl implements AiService {
 
         saveMessage(sessionId, "user", userMessage);
 
-        String reply = zhipuAiChatClient.prompt()
+        String reply = aiChatClient.prompt()
                 .user(userMessage)
                 .advisors(a -> a.param(
                         "chat_memory_conversation_id",
@@ -230,7 +230,7 @@ public class AiServiceImpl implements AiService {
                 aiReply.length() > 100 ? aiReply.substring(0, 100) + "..." : aiReply
             );
             
-            String generatedTitle = zhipuAiChatClient.prompt()
+            String generatedTitle = aiChatClient.prompt()
                     .user(prompt)
                     .call()
                     .content();

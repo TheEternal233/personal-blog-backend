@@ -73,8 +73,19 @@ public class VectorDataInitializer implements CommandLineRunner {
         // 6. 文本分块
         if (!finalDocuments.isEmpty()) {
             List<Document> splitDocs = tokenTextSplitter.split(finalDocuments);
-            vectorStore.add(splitDocs);
-            log.info("✅ 本次新增向量完成！共加载 {} 条数据", splitDocs.size());
+                        
+            // 7. 分批添加到向量库(硅基流动限制每批最多32个)
+            int batchSize = 32;
+            int totalAdded = 0;
+            for (int i = 0; i < splitDocs.size(); i += batchSize) {
+                int end = Math.min(i + batchSize, splitDocs.size());
+                List<Document> batch = splitDocs.subList(i, end);
+                vectorStore.add(batch);
+                totalAdded += batch.size();
+                log.info("📦 批次 {}/{} 添加完成", (i / batchSize + 1), (splitDocs.size() + batchSize - 1) / batchSize);
+            }
+                        
+            log.info("✅ 本次新增向量完成！共加载 {} 条数据", totalAdded);
         } else {
             log.info("✅ 没有新文件需要加载，知识库已是最新！");
         }

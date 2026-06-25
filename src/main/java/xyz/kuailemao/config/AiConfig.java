@@ -7,11 +7,15 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
+import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
+import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.zhipuai.ZhiPuAiChatModel;
-import org.springframework.ai.zhipuai.ZhiPuAiEmbeddingModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -25,6 +29,14 @@ public class AiConfig {
     // 注入你的工具类
     private final AiFunctionUtil aiFunctionUtil;
 
+    @Value("${spring.ai.openai.api-key}")
+    private String siliconApiKey;
+
+    @Value("${spring.ai.openai.base-url}")
+    private String siliconEndpoint;
+
+    @Value("${spring.ai.openai.embedding.options.model}")
+    private String siliconEmbeddingModel;
     @Configuration
     public class CommonConfiguration {
 
@@ -37,12 +49,12 @@ public class AiConfig {
         }
 
         /**
-         * 智谱AI + RAG + 工具调用
+         * 硅基OpenAI + RAG + 工具调用
          */
         @Primary
-        @Bean("zhipuAiChatClient")
-        public ChatClient zhipuAiChatClient(
-                ZhiPuAiChatModel model,
+        @Bean("aiChatClient")
+        public ChatClient aiChatClient(
+                OpenAiChatModel model,
                 ChatMemory chatMemory,
                 VectorStore vectorStore
         ) {
@@ -76,12 +88,19 @@ public class AiConfig {
         }
 
         /**
-         * 向量模型
+         * 向量模型 - 手动创建避免Spring AI自动配置发送额外参数
          */
         @Primary
         @Bean
-        public EmbeddingModel embeddingModel(ZhiPuAiEmbeddingModel zhiPuAiEmbeddingModel) {
-            return zhiPuAiEmbeddingModel;
+        public EmbeddingModel embeddingModel() {
+            OpenAiApi openAiApi = OpenAiApi.builder()
+                    .baseUrl(siliconEndpoint)
+                    .apiKey(siliconApiKey)
+                    .build();
+            OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
+                    .model(siliconEmbeddingModel)
+                    .build();
+            return new OpenAiEmbeddingModel(openAiApi, MetadataMode.EMBED, options);
         }
 
         /**
