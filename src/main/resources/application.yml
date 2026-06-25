@@ -14,17 +14,19 @@ spring:
         api-key: ${QDRANT_API_KEY}
         collection-name: ai_knowledge
         initialize-schema: true
-    #智谱
-    zhipuai:
+    #硅基流动
+    #zhipuai:
+    openai:
+      api-key: ${AI_API_KEY}
       embedding:
-        enabled: true
-        model: embedding-2
-        connect-timeout: 60s
-        read-timeout: 120s
-      api-key: ${ZHIPU_API_KEY}
+        options:
+          model: BAAI/bge-large-zh-v1.5
+          connect-timeout: 60s
+          read-timeout: 120s
+
       chat:
         options:
-          model: glm-4.7
+          model: deepseek-ai/DeepSeek-V4-Flash
           connect-timeout: 60s
           read-timeout: 120s
 
