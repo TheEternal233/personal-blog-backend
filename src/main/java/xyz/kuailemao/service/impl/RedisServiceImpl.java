@@ -16,9 +16,7 @@ import xyz.kuailemao.mapper.*;
 import xyz.kuailemao.service.RedisService;
 import xyz.kuailemao.utils.RedisCache;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -84,19 +82,45 @@ public class RedisServiceImpl implements RedisService {
     @Override
     public void initCount() {
         log.info("--------开始执行缓存文章点赞数量，评论数量，收藏数量--------");
-        // 文章收藏量
-        List<ArticleVO> articleVOS = articleMapper.selectList(null).stream().map(article -> article.asViewObject(ArticleVO.class)).toList();
-        articleVOS.forEach(articleVO -> {
-            // 文章收藏量
-            articleVO.setFavoriteCount(favoriteMapper.selectCount(new LambdaQueryWrapper<Favorite>().eq(Favorite::getTypeId, articleVO.getId()).eq(Favorite::getType, FavoriteEnum.FAVORITE_TYPE_ARTICLE.getType())));
-            // 文章点赞量
-            articleVO.setLikeCount(likeMapper.selectCount(new LambdaQueryWrapper<Like>().eq(Like::getTypeId, articleVO.getId()).eq(Like::getType, LikeEnum.LIKE_TYPE_ARTICLE.getType())));
-            // 文章评论量
-            articleVO.setCommentCount(commentMapper.selectCount(new LambdaQueryWrapper<Comment>().eq(Comment::getTypeId, articleVO.getId()).eq(Comment::getType, CommentEnum.COMMENT_TYPE_ARTICLE.getType()).eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK)));
-        });
-        Map<String, Long> favoriteCount = articleVOS.stream().collect(Collectors.toMap(articleVO -> articleVO.getId().toString(), ArticleVO::getFavoriteCount));
-        Map<String, Long> likeCount = articleVOS.stream().collect(Collectors.toMap(articleVO -> articleVO.getId().toString(), ArticleVO::getLikeCount));
-        Map<String, Long> commentCount = articleVOS.stream().collect(Collectors.toMap(articleVO -> articleVO.getId().toString(), ArticleVO::getCommentCount));
+        // 获取所有文章ID
+        List<Long> articleIds = articleMapper.selectList(null).stream().map(Article::getId).toList();
+        if (articleIds.isEmpty()) {
+            redisCache.setCacheMap(RedisConst.ARTICLE_FAVORITE_COUNT, Map.of());
+            redisCache.setCacheMap(RedisConst.ARTICLE_LIKE_COUNT, Map.of());
+            redisCache.setCacheMap(RedisConst.ARTICLE_COMMENT_COUNT, Map.of());
+            return;
+        }
+
+        // 批量查询文章收藏量：GROUP BY type_id，一次查询
+        Map<String, Long> favoriteCount = favoriteMapper.selectList(
+                new LambdaQueryWrapper<Favorite>()
+                        .eq(Favorite::getType, FavoriteEnum.FAVORITE_TYPE_ARTICLE.getType())
+                        .in(Favorite::getTypeId, articleIds)
+        ).stream().collect(Collectors.groupingBy(f -> f.getTypeId().toString(), Collectors.counting()));
+
+        // 批量查询文章点赞量：GROUP BY type_id，一次查询
+        Map<String, Long> likeCount = likeMapper.selectList(
+                new LambdaQueryWrapper<Like>()
+                        .eq(Like::getType, LikeEnum.LIKE_TYPE_ARTICLE.getType())
+                        .in(Like::getTypeId, articleIds)
+        ).stream().collect(Collectors.groupingBy(l -> l.getTypeId().toString(), Collectors.counting()));
+
+        // 批量查询文章评论量：GROUP BY type_id，一次查询
+        Map<String, Long> commentCount = commentMapper.selectList(
+                new LambdaQueryWrapper<Comment>()
+                        .eq(Comment::getType, CommentEnum.COMMENT_TYPE_ARTICLE.getType())
+                        .eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK)
+                        .in(Comment::getTypeId, articleIds)
+        ).stream().collect(Collectors.groupingBy(c -> c.getTypeId().toString(), Collectors.counting()));
+
+        // 补充没有数据的文章，默认值为 0
+        for (Long articleId : articleIds) {
+            String key = articleId.toString();
+            favoriteCount.putIfAbsent(key, 0L);
+            likeCount.putIfAbsent(key, 0L);
+            commentCount.putIfAbsent(key, 0L);
+        }
+
         redisCache.setCacheMap(RedisConst.ARTICLE_FAVORITE_COUNT, favoriteCount);
         redisCache.setCacheMap(RedisConst.ARTICLE_LIKE_COUNT, likeCount);
         redisCache.setCacheMap(RedisConst.ARTICLE_COMMENT_COUNT, commentCount);

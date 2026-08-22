@@ -84,13 +84,24 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         Page<Article> page = new Page<>(pageNum, pageSize);
         this.page(page, new LambdaQueryWrapper<Article>().eq(Article::getStatus, SQLConst.PUBLIC_ARTICLE).orderByDesc(Article::getCreateTime));
         List<Article> list = page.getRecords();
+        if (list.isEmpty()) return new PageVO<>(List.of(), 0L);
+
         // 文章分类
-        Map<Long, String> categoryMap = categoryMapper.selectBatchIds(list.stream().map(Article::getCategoryId).toList())
+        Map<Long, String> categoryMap = categoryMapper.selectBatchIds(list.stream().map(Article::getCategoryId).distinct().toList())
                 .stream().collect(Collectors.toMap(Category::getId, Category::getCategoryName));
 
-        List<ArticleTag> articleTags = articleTagMapper.selectBatchIds(list.stream().map(Article::getId).toList());
-        Map<Long, String> tagMap = tagMapper.selectBatchIds(articleTags.stream().map(ArticleTag::getTagId).toList())
-                .stream().collect(Collectors.toMap(Tag::getId, Tag::getTagName));
+        // 标签关系查询：使用 LambdaQueryWrapper 按 article_id 查询，而非 selectBatchIds（selectBatchIds 按主键查询）
+        List<Long> articleIds = list.stream().map(Article::getId).toList();
+        List<ArticleTag> articleTags = articleTagMapper.selectList(
+                new LambdaQueryWrapper<ArticleTag>().in(ArticleTag::getArticleId, articleIds));
+        Set<Long> tagIds = articleTags.stream().map(ArticleTag::getTagId).collect(Collectors.toSet());
+        Map<Long, String> tagMap = tagIds.isEmpty() ? Map.of() :
+                tagMapper.selectBatchIds(tagIds).stream().collect(Collectors.toMap(Tag::getId, Tag::getTagName));
+
+        // 批量获取 Redis 计数（只获取一次，避免每条文章都获取整个 Hash）
+        Map<String, Long> favoriteCountMap = convertToLongMap(redisCache.getCacheMap(RedisConst.ARTICLE_FAVORITE_COUNT));
+        Map<String, Long> likeCountMap = convertToLongMap(redisCache.getCacheMap(RedisConst.ARTICLE_LIKE_COUNT));
+        Map<String, Long> commentCountMap = convertToLongMap(redisCache.getCacheMap(RedisConst.ARTICLE_COMMENT_COUNT));
 
         List<ArticleVO> articleVOS = list.stream().map(article -> {
             ArticleVO articleVO = article.asViewObject(ArticleVO.class);
@@ -98,38 +109,33 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             articleVO.setTags(articleTags.stream()
                     .filter(at -> Objects.equals(at.getArticleId(), article.getId()))
                     .map(at -> tagMap.get(at.getTagId()))
+                    .filter(Objects::nonNull)
                     .toList());
+            String idStr = articleVO.getId().toString();
+            articleVO.setFavoriteCount(favoriteCountMap.getOrDefault(idStr, 0L));
+            articleVO.setLikeCount(likeCountMap.getOrDefault(idStr, 0L));
+            articleVO.setCommentCount(commentCountMap.getOrDefault(idStr, 0L));
             return articleVO;
-        }).toList();
-
-        // 永远赋值，没有缓存就给0
-        articleVOS = articleVOS.stream().peek(articleVO -> {
-            setArticleCount(articleVO, RedisConst.ARTICLE_FAVORITE_COUNT, CountTypeEnum.FAVORITE);
-            setArticleCount(articleVO, RedisConst.ARTICLE_LIKE_COUNT, CountTypeEnum.LIKE);
-            setArticleCount(articleVO, RedisConst.ARTICLE_COMMENT_COUNT, CountTypeEnum.COMMENT);
         }).toList();
 
         return new PageVO<>(articleVOS, page.getTotal());
     }
 
-    private void setArticleCount(ArticleVO articleVO, String redisKey, CountTypeEnum articleFieldName) {
-        String articleId = articleVO.getId().toString();
-        Object countObj = redisCache.getCacheMap(redisKey).get(articleId);
-        long count = 0L;
-        if (countObj != null) {
-            count = Long.parseLong(countObj.toString());
-        } else {
-            // 缓存发布新文章时数量缓存不存在
-            redisCache.setCacheMap(redisKey, Map.of(articleId, 0));
+    @SuppressWarnings("unchecked")
+    private Map<String, Long> convertToLongMap(Map<String, Object> cacheMap) {
+        Map<String, Long> result = new HashMap<>();
+        if (cacheMap == null) return result;
+        for (Map.Entry<String, Object> entry : cacheMap.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Long) {
+                result.put(entry.getKey(), (Long) value);
+            } else if (value instanceof Integer) {
+                result.put(entry.getKey(), ((Integer) value).longValue());
+            } else if (value instanceof Number) {
+                result.put(entry.getKey(), ((Number) value).longValue());
+            }
         }
-
-        if (articleFieldName.equals(CountTypeEnum.FAVORITE)) {
-            articleVO.setFavoriteCount(count);
-        } else if (articleFieldName.equals(CountTypeEnum.LIKE)) {
-            articleVO.setLikeCount(count);
-        } else if (articleFieldName.equals(CountTypeEnum.COMMENT)) {
-            articleVO.setCommentCount(count);
-        }
+        return result;
     }
 
     @Override

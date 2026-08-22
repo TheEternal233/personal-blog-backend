@@ -17,7 +17,8 @@ import xyz.kuailemao.mapper.TagMapper;
 import xyz.kuailemao.service.TagService;
 import xyz.kuailemao.utils.StringUtils;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * (Tag)表服务实现类
@@ -36,7 +37,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
     @Override
     public List<TagVO> listAllTag() {
-        return this.query().list().stream().map(tag -> tag.asViewObject(TagVO.class, item -> item.setArticleCount(articleTagMapper.selectCount(new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getTagId, tag.getId()))))).toList();
+        List<Tag> tags = this.query().list();
+        if (tags.isEmpty()) return List.of();
+
+        // 批量查询所有标签的文章数
+        Map<Long, Long> articleCountMap = getArticleCountMap(tags);
+
+        return tags.stream().map(tag -> tag.asViewObject(TagVO.class,
+                item -> item.setArticleCount(articleCountMap.getOrDefault(tag.getId(), 0L)))).toList();
     }
 
     @Override
@@ -52,13 +60,29 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         if (StringUtils.isNotNull(searchTagDTO.getStartTime()) && StringUtils.isNotNull(searchTagDTO.getEndTime()))
             queryWrapper.between(Tag::getCreateTime, searchTagDTO.getStartTime(), searchTagDTO.getEndTime());
 
-        return tagMapper.selectList(queryWrapper)
-                .stream()
-                .map(tag ->
-                        tag.asViewObject(TagVO.class, item ->
-                                item.setArticleCount(articleTagMapper.selectCount(new LambdaQueryWrapper<ArticleTag>()
-                                        .eq(ArticleTag::getTagId, tag.getId())))))
+        List<Tag> tags = tagMapper.selectList(queryWrapper);
+        if (tags.isEmpty()) return List.of();
+
+        // 批量查询所有标签的文章数
+        Map<Long, Long> articleCountMap = getArticleCountMap(tags);
+
+        return tags.stream()
+                .map(tag -> tag.asViewObject(TagVO.class,
+                        item -> item.setArticleCount(articleCountMap.getOrDefault(tag.getId(), 0L))))
                 .toList();
+    }
+
+    // 批量查询标签的文章数
+    private Map<Long, Long> getArticleCountMap(List<Tag> tags) {
+        List<Long> tagIds = tags.stream().map(Tag::getId).toList();
+        Map<Long, Long> articleCountMap = new HashMap<>();
+        if (!tagIds.isEmpty()) {
+            articleCountMap = articleTagMapper.selectList(
+                    new LambdaQueryWrapper<ArticleTag>().in(ArticleTag::getTagId, tagIds))
+                    .stream()
+                    .collect(Collectors.groupingBy(ArticleTag::getTagId, Collectors.counting()));
+        }
+        return articleCountMap;
     }
 
     @Override

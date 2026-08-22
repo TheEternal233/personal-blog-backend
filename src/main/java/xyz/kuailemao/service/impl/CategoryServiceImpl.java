@@ -17,7 +17,8 @@ import xyz.kuailemao.mapper.CategoryMapper;
 import xyz.kuailemao.service.CategoryService;
 import xyz.kuailemao.utils.StringUtils;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * (Category)表服务实现类
@@ -37,9 +38,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Override
     public List<CategoryVO> listAllCategory() {
         List<Category> categories = this.query().list();
+        if (categories.isEmpty()) return List.of();
+
+        // 批量查询所有分类的文章数
+        Map<Long, Long> articleCountMap = getCategoryArticleCountMap(categories);
 
         return categories.stream().map(category -> category.asViewObject(CategoryVO.class, item -> {
-            item.setArticleCount(articleMapper.selectCount(new LambdaQueryWrapper<Article>().eq(Article::getCategoryId, category.getId())));
+            item.setArticleCount(articleCountMap.getOrDefault(category.getId(), 0L));
         })).toList();
     }
 
@@ -57,13 +62,29 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         if (StringUtils.isNotNull(searchCategoryDTO.getStartTime()) && StringUtils.isNotNull(searchCategoryDTO.getEndTime()))
             queryWrapper.between(Category::getCreateTime, searchCategoryDTO.getStartTime(), searchCategoryDTO.getEndTime());
 
-        return categoryMapper.selectList(queryWrapper)
-                .stream()
-                .map(category ->
-                        category.asViewObject(CategoryVO.class, item ->
-                                item.setArticleCount(articleMapper.selectCount(new LambdaQueryWrapper<Article>()
-                                        .eq(Article::getCategoryId, category.getId())))))
+        List<Category> categories = categoryMapper.selectList(queryWrapper);
+        if (categories.isEmpty()) return List.of();
+
+        // 批量查询所有分类的文章数
+        Map<Long, Long> articleCountMap = getCategoryArticleCountMap(categories);
+
+        return categories.stream()
+                .map(category -> category.asViewObject(CategoryVO.class,
+                        item -> item.setArticleCount(articleCountMap.getOrDefault(category.getId(), 0L))))
                 .toList();
+    }
+
+    // 批量查询分类的文章数
+    private Map<Long, Long> getCategoryArticleCountMap(List<Category> categories) {
+        List<Long> categoryIds = categories.stream().map(Category::getId).toList();
+        Map<Long, Long> articleCountMap = new HashMap<>();
+        if (!categoryIds.isEmpty()) {
+            articleCountMap = articleMapper.selectList(
+                    new LambdaQueryWrapper<Article>().in(Article::getCategoryId, categoryIds))
+                    .stream()
+                    .collect(Collectors.groupingBy(Article::getCategoryId, Collectors.counting()));
+        }
+        return articleCountMap;
     }
 
     @Override

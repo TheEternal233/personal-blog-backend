@@ -32,10 +32,7 @@ import xyz.kuailemao.utils.RedisCache;
 import xyz.kuailemao.utils.SecurityUtils;
 import xyz.kuailemao.utils.StringUtils;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -86,15 +83,58 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         List<Comment> childComment = commentMapper.selectList(childQueryWrapper);
         if (!childComment.isEmpty()) comments.addAll(childComment);
         List<ArticleCommentVO> commentsVOS = comments.stream().map(comment -> comment.asViewObject(ArticleCommentVO.class)).toList();
+
+        // 批量预加载：收集所有涉及的 userId，一次性查询
+        Set<Long> userIds = new HashSet<>();
+        for (ArticleCommentVO vo : commentsVOS) {
+            if (vo.getCommentUserId() != null) userIds.add(vo.getCommentUserId());
+            if (vo.getReplyUserId() != null) userIds.add(vo.getReplyUserId());
+        }
+        final Map<Long, User> userMap;
+        if (!userIds.isEmpty()) {
+            userMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+        } else {
+            userMap = new HashMap<>();
+        }
+
+        // 批量预加载：所有评论的点赞数（Like.typeId 为 Integer，需转为 Long 统一 key 类型）
+        List<Long> commentIds = commentsVOS.stream().map(ArticleCommentVO::getId).toList();
+        final Map<Long, Long> likeCountMap;
+        if (!commentIds.isEmpty()) {
+            likeCountMap = likeMapper.selectList(new LambdaQueryWrapper<Like>()
+                            .eq(Like::getType, LikeEnum.LIKE_TYPE_COMMENT.getType())
+                            .in(Like::getTypeId, commentIds))
+                    .stream()
+                    .collect(Collectors.groupingBy(l -> Long.valueOf(l.getTypeId()), Collectors.counting()));
+        } else {
+            likeCountMap = new HashMap<>();
+        }
+
+        // 批量预加载：所有子评论的回复数（用于 getChildCommentCount）
+        final Map<Long, Long> replyCountMap;
+        if (!commentIds.isEmpty()) {
+            replyCountMap = commentMapper.selectList(new LambdaQueryWrapper<Comment>()
+                            .eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK)
+                            .in(Comment::getReplyId, commentIds))
+                    .stream()
+                    .collect(Collectors.groupingBy(Comment::getReplyId, Collectors.counting()));
+        } else {
+            replyCountMap = new HashMap<>();
+        }
+
+        // 父评论总数（只查一次）
+        long parentCommentCount = this.count(new LambdaQueryWrapper<Comment>()
+                .eq(Comment::getType, type)
+                .eq(Comment::getTypeId, typeId)
+                .eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK)
+                .isNull(Comment::getParentId));
+
         List<ArticleCommentVO> parentComments = commentsVOS.stream().filter(comment -> comment.getParentId() == null).toList();
         List<ArticleCommentVO> collect = parentComments.stream().peek(comment -> {
-                    comment.setChildComment(getChildComment(commentsVOS, comment.getId()));
-                    comment.setChildCommentCount(getChildCommentCount(commentsVOS, comment.getId()));
-                    comment.setParentCommentCount(this.count(new LambdaQueryWrapper<Comment>()
-                            .eq(Comment::getType, type)
-                            .eq(Comment::getTypeId, typeId)
-                            .eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK)
-                            .isNull(Comment::getParentId)));
+                    comment.setChildComment(getChildComment(commentsVOS, comment.getId(), userMap, likeCountMap));
+                    comment.setChildCommentCount(getChildCommentCount(commentsVOS, comment.getId(), replyCountMap));
+                    comment.setParentCommentCount(parentCommentCount);
                 }
         ).toList();
         // 总评论数量
@@ -226,8 +266,24 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                     .eq(StringUtils.isNotNull(searchDTO.getIsCheck()), Comment::getIsCheck, searchDTO.getIsCheck());
         }
 
-        return commentMapper.selectList(wrapper.orderByDesc(Comment::getCreateTime)).stream().map(comment -> comment.asViewObject(CommentListVO.class,
-                v -> v.setCommentUserName(userMapper.selectById(comment.getCommentUserId()).getUsername()))).collect(Collectors.toList());
+        List<Comment> commentList = commentMapper.selectList(wrapper.orderByDesc(Comment::getCreateTime));
+        if (commentList.isEmpty()) return List.of();
+
+        // 批量查询所有评论相关用户，避免 N+1
+        Set<Long> userIds = commentList.stream()
+                .map(Comment::getCommentUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        final Map<Long, String> userMap;
+        if (!userIds.isEmpty()) {
+            userMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(User::getId, User::getUsername, (a, b) -> a));
+        } else {
+            userMap = new HashMap<>();
+        }
+
+        return commentList.stream().map(comment -> comment.asViewObject(CommentListVO.class,
+                v -> v.setCommentUserName(userMap.getOrDefault(comment.getCommentUserId(), "")))).collect(Collectors.toList());
     }
 
     @Override
@@ -270,41 +326,43 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         return ResponseResult.failure();
     }
 
-    private List<ArticleCommentVO> getChildComment(List<ArticleCommentVO> comments, Long parentId) {
+    private List<ArticleCommentVO> getChildComment(List<ArticleCommentVO> comments, Long parentId,
+                                                       Map<Long, User> userMap, Map<Long, Long> likeCountMap) {
 
         return comments.stream()
                 .filter(comment -> {
                     if (Objects.isNull(comment.getParentId())) {
-                        User user = userMapper.selectById(comment.getCommentUserId());
-                        comment.setCommentUserNickname(user.getNickname())
-                                .setCommentUserAvatar(user.getAvatar())
-                                .setLikeCount(likeService.getLikeCount(LikeEnum.LIKE_TYPE_COMMENT.getType(), comment.getId()));
+                        User user = userMap.get(comment.getCommentUserId());
+                        if (user != null) {
+                            comment.setCommentUserNickname(user.getNickname())
+                                    .setCommentUserAvatar(user.getAvatar());
+                        }
+                        comment.setLikeCount(likeCountMap.getOrDefault(comment.getId(), 0L));
                     }
                     return Objects.nonNull(comment.getParentId()) && Objects.equals(comment.getParentId(), parentId);
                 })
                 .peek(comment -> {
-                    User user = userMapper.selectById(comment.getCommentUserId());
-                    comment.setChildComment(getChildComment(comments, comment.getId()))
-                            .setCommentUserNickname(user.getNickname())
-                            .setCommentUserAvatar(user.getAvatar())
-                            .setReplyUserNickname(userMapper.selectById(comment.getReplyUserId()).getNickname())
-                            .setLikeCount(likeService.getLikeCount(LikeEnum.LIKE_TYPE_COMMENT.getType(), comment.getId()));
+                    User user = userMap.get(comment.getCommentUserId());
+                    if (user != null) {
+                        comment.setCommentUserNickname(user.getNickname())
+                                .setCommentUserAvatar(user.getAvatar());
+                    }
+                    User replyUser = userMap.get(comment.getReplyUserId());
+                    if (replyUser != null) {
+                        comment.setReplyUserNickname(replyUser.getNickname());
+                    }
+                    comment.setLikeCount(likeCountMap.getOrDefault(comment.getId(), 0L));
+                    comment.setChildComment(getChildComment(comments, comment.getId(), userMap, likeCountMap));
                 }).toList();
     }
 
-    // 获取父评论底下的评论数量
-    private Long getChildCommentCount(List<ArticleCommentVO> comments, Long parentId) {
-        // 递归获取父评论的子评论数
+    private Long getChildCommentCount(List<ArticleCommentVO> comments, Long parentId, Map<Long, Long> replyCountMap) {
         return comments.stream()
                 .filter(comment -> Objects.nonNull(comment.getParentId()) && Objects.equals(comment.getParentId(), parentId))
-                .peek(comment -> {
-                    // 回复子评论的数量
-                    Long count = commentMapper.selectCount(new LambdaQueryWrapper<Comment>().eq(Comment::getReplyId, comment.getId()).eq(Comment::getIsCheck, SQLConst.COMMENT_IS_CHECK));
-                    comment.setChildCommentCount(count);
-                })
+                .peek(comment -> comment.setChildCommentCount(replyCountMap.getOrDefault(comment.getId(), 0L)))
                 .mapToLong(comment -> {
                     if (!comment.getChildComment().isEmpty()) {
-                        return (1 + getChildCommentCount(comment.getChildComment(), comment.getId()));
+                        return (1 + getChildCommentCount(comment.getChildComment(), comment.getId(), replyCountMap));
                     } else {
                         return 1;
                     }

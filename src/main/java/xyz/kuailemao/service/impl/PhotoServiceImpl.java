@@ -23,10 +23,9 @@ import xyz.kuailemao.utils.FileUploadUtils;
 import xyz.kuailemao.utils.SecurityUtils;
 import xyz.kuailemao.utils.StringUtils;
 
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
-import static xyz.kuailemao.constants.SQLConst.LIMIT_ONE_SQL;
 import static xyz.kuailemao.constants.SQLConst.ORDER_BY_CREATE_TIME_DESC;
 
 
@@ -78,18 +77,29 @@ public class PhotoServiceImpl extends ServiceImpl<PhotoMapper, Photo> implements
         lambdaQueryWrapper.last(ORDER_BY_CREATE_TIME_DESC);
         photoMapper.selectPage(page, lambdaQueryWrapper);
         if (page.getRecords().isEmpty()) return new PageVO<>(List.of(), page.getTotal());
-        // 查询每个相册的封面
+
+        // 批量查询所有相册的封面：收集所有相册的 parentId，一次查询
+        List<Long> albumIds = page.getRecords().stream()
+                .filter(photo -> Objects.equals(photo.getType(), AlbumOrPhotoEnum.ALBUM.getCode()))
+                .map(Photo::getId)
+                .toList();
+        Map<Long, Photo> coverMap = new HashMap<>();
+        if (!albumIds.isEmpty()) {
+            coverMap = photoMapper.selectList(new LambdaQueryWrapper<Photo>()
+                            .in(Photo::getParentId, albumIds)
+                            .eq(Photo::getType, AlbumOrPhotoEnum.PHOTO.getCode())
+                            .eq(Photo::getUserId, userId)
+                            .orderByDesc(Photo::getCreateTime))
+                    .stream()
+                    .collect(Collectors.toMap(Photo::getParentId, p -> p, (a, b) -> a));
+        }
+
         for (Photo photo : page.getRecords()) {
             if (Objects.equals(photo.getType(), AlbumOrPhotoEnum.ALBUM.getCode())) {
-                LambdaQueryWrapper<Photo> coverWrapper = new LambdaQueryWrapper<Photo>()
-                        .eq(Photo::getParentId, photo.getId())
-                        .eq(Photo::getType, AlbumOrPhotoEnum.PHOTO.getCode())
-                        .eq(Photo::getUserId, userId)
-                        .last(ORDER_BY_CREATE_TIME_DESC).last(LIMIT_ONE_SQL);
-                Photo photoOne = photoMapper.selectOne(coverWrapper);
-                if (null != photoOne && StringUtils.isValidUrl(photoOne.getUrl())) {
-                    page.getRecords().get(page.getRecords().indexOf(photo)).setUrl(photoOne.getUrl());
-                }else{
+                Photo cover = coverMap.get(photo.getId());
+                if (null != cover && StringUtils.isValidUrl(cover.getUrl())) {
+                    page.getRecords().get(page.getRecords().indexOf(photo)).setUrl(cover.getUrl());
+                } else {
                     page.getRecords().get(page.getRecords().indexOf(photo)).setUrl("");
                 }
             }

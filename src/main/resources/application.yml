@@ -128,17 +128,17 @@ spring:
           dataSource:
             quartz_jobs:
               driver: com.mysql.cj.jdbc.Driver
-              URL: jdbc:mysql://82.156.225.4:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+              URL: jdbc:mysql://192.168.100.132:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
               user: ${DB_USERNAME}
               password: ${DB_PASSWORD}
               maxConnections: 10
-
+# http://192.168.100.132/
 # ✅ 项目自定义邮箱配置（和spring.mail不冲突）
 mail:
   from: 2950355750@qq.com
   link:
     apply:
-      redirect-uri: http://82.156.225.4:8088/link/email/apply
+      redirect-uri: http://192.168.100.132:8088/link/email/apply
   article-email-notice: true
   article-reply-notice: false
   message-email-notice: false
@@ -169,10 +169,10 @@ web:
 
 # CORS 白名单，仅允许这些 Origin 跨域访问（逗号分隔）
 cors:
-  allowed-origins: http://82.156.225.4,http://82.156.225.4/admin,http://82.156.225.4:99,http://82.156.225.4:6678
+  allowed-origins: http://192.168.100.132,http://192.168.100.132/admin,http://192.168.100.132:99,http://192.168.100.132:6678
 
 minio:
-  endpoint: http://82.156.225.4:9000
+  endpoint: http://192.168.100.132:9000
   accessKey: ${MINIO_USERNAME}
   secretKey: ${MINIO_PASSWORD}
   bucketName: blog
@@ -181,8 +181,8 @@ oauth:
   gitee:
     clientId: ${GITEE_CLIENT_ID}
     clientSecret: ${GITEE_CLIENT_SECRET}
-    redirectUri: http://82.156.225.4:8088/oauth/gitee/callback
+    redirectUri: http://192.168.100.132:8088/oauth/gitee/callback
   github:
     clientId: ${GITHUB_CLIENT_ID}
     clientSecret: ${GITHUB_CLIENT_SECRET}
-    redirectUri: http://82.156.225.4:8088/oauth/github/callback
+    redirectUri: http://192.168.100.132:8088/oauth/github/callback
