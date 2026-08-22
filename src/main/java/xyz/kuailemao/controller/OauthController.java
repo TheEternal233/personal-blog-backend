@@ -32,7 +32,7 @@ import java.io.IOException;
 @Slf4j
 @Tag(name = "第三方登录")
 @RestController
-@RequestMapping("/oauth")
+@RequestMapping({"/oauth", "/api/oauth"})
 public class OauthController {
 
     @Resource

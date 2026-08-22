@@ -59,7 +59,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://82.156.225.4:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://192.168.100.132:3306/blog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -138,7 +138,7 @@ mail:
   from: 2950355750@qq.com
   link:
     apply:
-      redirect-uri: http://192.168.100.132:8088/link/email/apply
+      redirect-uri: https://frp-off.com:55684/link/email/apply
   article-email-notice: true
   article-reply-notice: false
   message-email-notice: false
@@ -165,11 +165,11 @@ mybatis-plus:
 
 web:
   index:
-    path: http://82.156.225.4/
+    path: https://frp-off.com:55684/
 
 # CORS 白名单，仅允许这些 Origin 跨域访问（逗号分隔）
 cors:
-  allowed-origins: http://192.168.100.132,http://192.168.100.132/admin,http://192.168.100.132:99,http://192.168.100.132:6678
+  allowed-origins: https://frp-off.com:55684,http://192.168.100.132,http://192.168.100.132/admin,http://192.168.100.132:99,http://192.168.100.132:6678
 
 minio:
   endpoint: http://192.168.100.132:9000
@@ -181,8 +181,8 @@ oauth:
   gitee:
     clientId: ${GITEE_CLIENT_ID}
     clientSecret: ${GITEE_CLIENT_SECRET}
-    redirectUri: http://192.168.100.132:8088/oauth/gitee/callback
+    redirectUri: https://frp-off.com:55684/oauth/gitee/callback
   github:
     clientId: ${GITHUB_CLIENT_ID}
     clientSecret: ${GITHUB_CLIENT_SECRET}
-    redirectUri: http://192.168.100.132:8088/oauth/github/callback
+    redirectUri: https://frp-off.com:55684/oauth/github/callback
