@@ -172,6 +172,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         // 上下篇文章
         LambdaQueryWrapper<Article> preAndNextWrapper = new LambdaQueryWrapper<>();
+        preAndNextWrapper.eq(Article::getStatus, SQLConst.PUBLIC_ARTICLE);
         // 上一篇
         preAndNextWrapper.lt(Article::getId, id);
         Article preArticle = articleMapper.selectOne(preAndNextWrapper
@@ -179,6 +180,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 .last(SQLConst.LIMIT_ONE_SQL));
         // 下一篇
         preAndNextWrapper.clear();
+        preAndNextWrapper.eq(Article::getStatus, SQLConst.PUBLIC_ARTICLE);
         preAndNextWrapper.gt(Article::getId, id);
         Article nextArticle = articleMapper.selectOne(preAndNextWrapper
                 .orderByAsc(Article::getId)
@@ -215,20 +217,23 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Override
     public List<RelatedArticleVO> relatedArticleList(Integer categoryId, Integer articleId) {
-        // 文章id不等于当前文章id,相关推荐排除自己，5条
         List<Article> articles = articleMapper.selectList(
                 new LambdaQueryWrapper<Article>()
                         .eq(Article::getStatus, SQLConst.PUBLIC_ARTICLE)
                         .and(i -> i.eq(Article::getCategoryId, categoryId))
                         .ne(Article::getId, articleId)
+                        .last("LIMIT " + SQLConst.RELATED_ARTICLE_COUNT)
         );
-        List<Article> articlesLimit5 = articles.stream().limit(SQLConst.RELATED_ARTICLE_COUNT).toList();
-        return articlesLimit5.stream().map(article -> article.asViewObject(RelatedArticleVO.class)).toList();
+        return articles.stream().map(article -> article.asViewObject(RelatedArticleVO.class)).toList();
     }
 
     @Override
     public List<TimeLineVO> listTimeLine() {
-        List<Article> list = this.query().list();
+        List<Article> list = this.query()
+                .eq("status", SQLConst.PUBLIC_ARTICLE)
+                .orderByDesc("create_time")
+                .last("LIMIT 500")
+                .list();
         return list.stream().map(article -> article.asViewObject(TimeLineVO.class)).toList();
     }
 
@@ -292,14 +297,31 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public ResponseResult<Void> publish(ArticleDTO articleDTO) {
         Article article = articleDTO.asViewObject(Article.class, v -> v.setUserId(SecurityUtils.getUserId()));
         if (this.saveOrUpdate(article)) {
-            // 清除标签关系
-            articleTagMapper.delete(
+            // 查询已有标签关系
+            List<Long> existingTagIds = articleTagMapper.selectList(
                     new LambdaQueryWrapper<ArticleTag>()
-                            .eq(ArticleTag::getArticleId, article.getId())
-            );
-            // 新增标签关系
-            List<ArticleTag> articleTags = articleDTO.getTagId().stream().map(articleTag -> ArticleTag.builder().articleId(article.getId()).tagId(articleTag).build()).toList();
-            articleTagService.saveBatch(articleTags);
+                            .eq(ArticleTag::getArticleId, article.getId()))
+                    .stream().map(ArticleTag::getTagId).toList();
+            List<Long> newTagIds = articleDTO.getTagId();
+
+            // 只删除被移除的标签
+            List<Long> toDelete = existingTagIds.stream()
+                    .filter(tagId -> !newTagIds.contains(tagId)).toList();
+            if (!toDelete.isEmpty()) {
+                articleTagMapper.delete(
+                        new LambdaQueryWrapper<ArticleTag>()
+                                .eq(ArticleTag::getArticleId, article.getId())
+                                .in(ArticleTag::getTagId, toDelete));
+            }
+
+            // 只新增新标签
+            List<Long> toAdd = newTagIds.stream()
+                    .filter(tagId -> !existingTagIds.contains(tagId)).toList();
+            if (!toAdd.isEmpty()) {
+                List<ArticleTag> articleTags = toAdd.stream()
+                        .map(tagId -> ArticleTag.builder().articleId(article.getId()).tagId(tagId).build()).toList();
+                articleTagService.saveBatch(articleTags);
+            }
             return ResponseResult.success();
         }
         return ResponseResult.failure();
