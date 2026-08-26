@@ -313,18 +313,18 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         int updateCount = commentMapper.update(Comment.builder().id(isCheckDTO.getId()).isCheck(isCheckDTO.getIsCheck()).build(), wrapper);
         if (updateCount > 0) {
             // 同步redis评论数量
-            // 如果是文章评论，则改变redis中文章数量
-            // 1.查询评论所在的文章id
-            Integer articleId = commentMapper
-                    .selectOne(
-                            new LambdaQueryWrapper<Comment>()
-                                    .eq(Comment::getId, isCheckDTO.getId())
-                                    .eq(Comment::getType, CommentEnum.COMMENT_TYPE_ARTICLE.getType())).getTypeId();
-            // 2.修改redis数量
-            if (Objects.equals(isCheckDTO.getIsCheck(), SQLConst.COMMENT_IS_CHECK)) {
-                redisCache.incrementCacheMapValue(RedisConst.ARTICLE_COMMENT_COUNT, articleId.toString(), updateCount);
-            } else {
-                redisCache.incrementCacheMapValue(RedisConst.ARTICLE_COMMENT_COUNT, articleId.toString(), -updateCount);
+            // 仅文章评论需要同步，留言评论跳过（避免 NPE）
+            Comment comment = commentMapper.selectOne(
+                    new LambdaQueryWrapper<Comment>()
+                            .eq(Comment::getId, isCheckDTO.getId())
+                            .eq(Comment::getType, CommentEnum.COMMENT_TYPE_ARTICLE.getType()));
+            if (comment != null) {
+                Integer articleId = comment.getTypeId();
+                if (Objects.equals(isCheckDTO.getIsCheck(), SQLConst.COMMENT_IS_CHECK)) {
+                    redisCache.incrementCacheMapValue(RedisConst.ARTICLE_COMMENT_COUNT, articleId.toString(), updateCount);
+                } else {
+                    redisCache.incrementCacheMapValue(RedisConst.ARTICLE_COMMENT_COUNT, articleId.toString(), -updateCount);
+                }
             }
             return ResponseResult.success();
         }

@@ -18,7 +18,7 @@ import xyz.kuailemao.service.TreeHoleService;
 import xyz.kuailemao.utils.SecurityUtils;
 import xyz.kuailemao.utils.StringUtils;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -51,10 +51,18 @@ public class TreeHoleServiceImpl extends ServiceImpl<TreeHoleMapper, TreeHole> i
     public List<TreeHoleVO> getTreeHole() {
         List<TreeHole> treeHoles = treeHoleMapper.selectList(new LambdaQueryWrapper<TreeHole>().eq(TreeHole::getIsCheck, SQLConst.IS_CHECK_YES));
         if (treeHoles.isEmpty()) return null;
+
+        // 批量查询用户，避免 N+1
+        Set<Long> userIds = treeHoles.stream().map(TreeHole::getUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+
         return treeHoles.stream().map(treeHole -> treeHole.asViewObject(TreeHoleVO.class, treeHoleVO -> {
-            User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getId, treeHole.getUserId()));
-            treeHoleVO.setNickname(user.getUsername());
-            treeHoleVO.setAvatar(user.getAvatar());
+            User user = userMap.get(treeHole.getUserId());
+            if (user != null) {
+                treeHoleVO.setNickname(user.getUsername());
+                treeHoleVO.setAvatar(user.getAvatar());
+            }
         })).collect(Collectors.toList());
     }
 
@@ -75,9 +83,13 @@ public class TreeHoleServiceImpl extends ServiceImpl<TreeHoleMapper, TreeHole> i
         }
         List<TreeHole> treeHoles = treeHoleMapper.selectList(wrapper);
         if (!treeHoles.isEmpty()) {
+            // 批量查询用户，避免 N+1
+            Set<Long> userIds = treeHoles.stream().map(TreeHole::getUserId).collect(Collectors.toSet());
+            Map<Long, String> usernameMap = userMapper.selectBatchIds(userIds).stream()
+                    .collect(Collectors.toMap(User::getId, User::getUsername, (a, b) -> a));
+
             return treeHoles.stream().map(treeHole -> treeHole.asViewObject(TreeHoleListVO.class,
-                    v -> v.setUserName(userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getId, treeHole.getUserId()))
-                            .getUsername()))).toList();
+                    v -> v.setUserName(usernameMap.getOrDefault(treeHole.getUserId(), "")))).toList();
         }
         return null;
     }
