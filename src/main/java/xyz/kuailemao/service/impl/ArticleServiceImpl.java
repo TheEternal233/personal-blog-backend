@@ -148,7 +148,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Override
     public List<RandomArticleVO> listRandomArticle() {
-        List<Article> randomArticles = articleMapper.selectRandomArticles(SQLConst.PUBLIC_ARTICLE, SQLConst.RANDOM_ARTICLE_COUNT);
+        // 先查所有符合条件的文章 ID（只查 ID 列，走索引，极快）
+        List<Long> allIds = articleMapper.selectArticleIdsByStatus(SQLConst.PUBLIC_ARTICLE);
+        if (allIds.isEmpty()) return List.of();
+
+        // Java 层洗牌，取前 N 个，避免 ORDER BY RAND() 全表扫描
+        Collections.shuffle(allIds);
+        List<Long> randomIds = allIds.subList(0, Math.min(SQLConst.RANDOM_ARTICLE_COUNT, allIds.size()));
+
+        List<Article> randomArticles = articleMapper.selectBatchIds(randomIds);
         return randomArticles.stream()
                 .map(article -> article.asViewObject(RandomArticleVO.class))
                 .toList();
